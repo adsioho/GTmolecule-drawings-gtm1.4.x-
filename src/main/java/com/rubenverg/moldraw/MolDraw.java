@@ -292,22 +292,22 @@ public class MolDraw {
                         .map(tt -> tt.getString().equals(material.getChemicalFormula()))
                         .orElse(false))
                 .reduce((a, b) -> b);
-if (!MolDrawConfig.INSTANCE.onlyShowOnShift || GTUtil.isShiftDown()) {
-    if (!Objects.isNull(mol) && MolDrawConfig.INSTANCE.molecule.showMolecules) {
-        if (idx.isPresent()) {
-            tooltipElements.set(idx.getAsInt(), Either.right(new MoleculeTooltipComponent(mol)));
-        } else {
-            tooltipElements.add(1, Either.right(new MoleculeTooltipComponent(mol)));
-        }
-    } else if (!Objects.isNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
-        if (idx.isPresent()) {
-            tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(alloy)));
-        } else {
-            tooltipElements.add(1, Either.right(new AlloyTooltipComponent(alloy)));
-        }
-    } else {
-        tryColorizeFormula(material, idx, tooltipElements);
-    }
+        if (!MolDrawConfig.INSTANCE.onlyShowOnShift || GTUtil.isShiftDown()) {
+            if (!Objects.isNull(mol) && MolDrawConfig.INSTANCE.molecule.showMolecules) {
+                if (idx.isPresent()) {
+                    tooltipElements.set(idx.getAsInt(), Either.right(new MoleculeTooltipComponent(mol)));
+                } else {
+                    tooltipElements.add(1, Either.right(new MoleculeTooltipComponent(mol)));
+                }
+            } else if (!Objects.isNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
+                if (idx.isPresent()) {
+                    tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(alloy)));
+                } else {
+                    tooltipElements.add(1, Either.right(new AlloyTooltipComponent(alloy)));
+                }
+            } else {
+                tryColorizeFormula(material, idx, tooltipElements);
+            }
         } else {
             tryColorizeFormula(material, idx, tooltipElements);
 
