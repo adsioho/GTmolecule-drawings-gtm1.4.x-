@@ -12,12 +12,11 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FastColor;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 
+import com.adsioho.gtm.compat.MaterialHelper;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.rubenverg.moldraw.molecule.Element;
 import com.rubenverg.moldraw.molecule.MathUtils;
 import org.jetbrains.annotations.Nullable;
-
-import com.adsioho.gtm.compat.MaterialHelper; // 修复导入路径
 
 import java.awt.*;
 import java.io.IOException;

@@ -186,39 +186,40 @@ public class MolDraw {
         event.registerReloadListener(
                 new SimplePreparableReloadListener<Map<Material, Optional<List<Pair<Material, Long>>>>>() {
 
-@MethodsReturnNonnullByDefault
-@ParametersAreNonnullByDefault
-@Override
-protected Map<Material, Optional<List<Pair<Material, Long>>>> prepare(ResourceManager resourceManager,
-                                                                      ProfilerFiller profilerFiller) {
-    final Map<Material, Optional<List<Pair<Material, Long>>>> alloys = new HashMap<>();
-    for (final var id : resourceManager
-            .listResources("alloys", path -> path.toString().endsWith(".json")).keySet()) {
-        try (final var stream = resourceManager.open(id)) {
-            final var file = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-            final var material = GTCEuAPI.materialManager
-                    .getMaterial(id.toString().replace(".json", "").replace("alloys/", ""));
-            if (Objects.isNull(material)) {
-                continue;
-            }
-            final var alloy = AlloysData.read(gson.fromJson(file, JsonElement.class));
-            if (alloy.isEmpty()) {
-                alloys.put(material, Optional.empty());
-            } else {
-                alloys.put(material, Optional.of(alloy.get().stream().map(pair -> {
-                    final var subMat = GTCEuAPI.materialManager.getMaterial(pair.getA().toString());
-                    // 修复：使用 MaterialHelper.isNull() 而不是 subMat.isNull()
-                    if (Objects.isNull(subMat) || MaterialHelper.isNull(subMat)) throw new RuntimeException(
-                            "Alloy JSON contains a material that doesn't exist");
-                    return new Pair<>(subMat, pair.getB());
-                }).toList()));
-            }
-        } catch (IOException | JsonSyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    return alloys;
-}
+                    @MethodsReturnNonnullByDefault
+                    @ParametersAreNonnullByDefault
+                    @Override
+                    protected Map<Material, Optional<List<Pair<Material, Long>>>> prepare(ResourceManager resourceManager,
+                                                                                          ProfilerFiller profilerFiller) {
+                        final Map<Material, Optional<List<Pair<Material, Long>>>> alloys = new HashMap<>();
+                        for (final var id : resourceManager
+                                .listResources("alloys", path -> path.toString().endsWith(".json")).keySet()) {
+                            try (final var stream = resourceManager.open(id)) {
+                                final var file = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                                final var material = GTCEuAPI.materialManager
+                                        .getMaterial(id.toString().replace(".json", "").replace("alloys/", ""));
+                                if (Objects.isNull(material)) {
+                                    continue;
+                                }
+                                final var alloy = AlloysData.read(gson.fromJson(file, JsonElement.class));
+                                if (alloy.isEmpty()) {
+                                    alloys.put(material, Optional.empty());
+                                } else {
+                                    alloys.put(material, Optional.of(alloy.get().stream().map(pair -> {
+                                        final var subMat = GTCEuAPI.materialManager.getMaterial(pair.getA().toString());
+                                        // 修复：使用 MaterialHelper.isNull() 而不是 subMat.isNull()
+                                        if (Objects.isNull(subMat) || MaterialHelper.isNull(subMat))
+                                            throw new RuntimeException(
+                                                    "Alloy JSON contains a material that doesn't exist");
+                                        return new Pair<>(subMat, pair.getB());
+                                    }).toList()));
+                                }
+                            } catch (IOException | JsonSyntaxException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                        return alloys;
+                    }
 
                     @MethodsReturnNonnullByDefault
                     @ParametersAreNonnullByDefault
