@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FastColor;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 
-import com.adsioho.gtm.compat.MaterialHelper;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.rubenverg.moldraw.molecule.Element;
 import com.rubenverg.moldraw.molecule.MathUtils;
