@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.network.chat.Component;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import com.rubenverg.moldraw.*;
