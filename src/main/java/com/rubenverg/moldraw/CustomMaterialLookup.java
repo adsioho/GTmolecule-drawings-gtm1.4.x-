@@ -9,7 +9,6 @@ import com.gregtechceu.gtceu.api.data.tag.TagPrefix;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Map;
@@ -249,46 +248,53 @@ public final class CustomMaterialLookup {
             MolDraw.LOGGER.debug("CustomMaterialLookup: getMaterialEntry failed", t);
         }
 
-        // 最后手段：检查物品注册名是否包含材料名
+        // 最后手段：尝试从物品描述名推断
         try {
-            // 使用ResourceLocation获取物品ID
-            ResourceLocation itemId = Registry.ITEM.getKey(stack.getItem());
-            if (itemId != null) {
-                String itemIdStr = itemId.toString();
-                
-                // 如果是gtceu物品，尝试从注册名提取材料名
-                if (itemIdStr.startsWith("gtceu:")) {
-                    String itemName = itemIdStr.substring(6); // 去掉"gtceu:"前缀
-                    
-                    // 尝试直接作为材料名
-                    Material material = GTCEuAPI.materialManager.getMaterial(itemName);
+            // 使用物品的描述名作为参考
+            String itemDescription = stack.getItem().getDescriptionId();
+            
+            // 简化描述名：去掉"item."前缀和模组名部分
+            String simplifiedDesc = itemDescription;
+            if (simplifiedDesc.contains(".")) {
+                simplifiedDesc = simplifiedDesc.substring(simplifiedDesc.lastIndexOf('.') + 1);
+            }
+            
+            // 尝试查找材料
+            Material material = GTCEuAPI.materialManager.getMaterial(simplifiedDesc);
+            if (material != null && !isMaterialNull(material)) {
+                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description: {}", 
+                    material.getName());
+                return Optional.of(material);
+            }
+            
+            // 尝试去掉常见后缀
+            String[] suffixes = {"_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear", "_block"};
+            for (String suffix : suffixes) {
+                if (simplifiedDesc.endsWith(suffix)) {
+                    String baseName = simplifiedDesc.substring(0, simplifiedDesc.length() - suffix.length());
+                    material = GTCEuAPI.materialManager.getMaterial(baseName);
                     if (material != null && !isMaterialNull(material)) {
-                        MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from item ID: {}", 
+                        MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description (without suffix): {}", 
                             material.getName());
                         return Optional.of(material);
                     }
-                    
-                    // 尝试去掉常见后缀
-                    String[] suffixes = {"_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear", "_block"};
-                    for (String suffix : suffixes) {
-                        if (itemName.endsWith(suffix)) {
-                            String baseName = itemName.substring(0, itemName.length() - suffix.length());
-                            material = GTCEuAPI.materialManager.getMaterial(baseName);
-                            if (material != null && !isMaterialNull(material)) {
-                                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from item ID (without suffix): {}", 
-                                    material.getName());
-                                return Optional.of(material);
-                            }
-                        }
-                    }
+                }
+            }
+            
+            // 如果描述名包含"gtceu"，尝试提取材料名
+            if (itemDescription.contains("gtceu")) {
+                // 尝试匹配模式：gtceu:xxx
+                if (itemDescription.matches(".*gtceu:([a-zA-Z0-9_]+).*")) {
+                    // 这里我们只能尝试从描述字符串中提取
+                    // 但实际上更可靠的方式是从标签推断
                 }
             }
         } catch (Throwable t) {
-            MolDraw.LOGGER.debug("CustomMaterialLookup: Item ID analysis failed", t);
+            MolDraw.LOGGER.debug("CustomMaterialLookup: Description analysis failed", t);
         }
 
         MolDraw.LOGGER.debug("CustomMaterialLookup: No material found for item: {}", 
-            stack.getItem().toString());
+            stack.getItem());
         return Optional.empty();
     }
 
