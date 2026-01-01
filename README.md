@@ -15,13 +15,14 @@ GregTechModern 1.x 特供版，去除了对高版本(gtm7+)的一些依赖，计
 
 MolDraw comes out of the box with support for not only most of the organic materials from base GTCEu, but also a bunch of addons and modpacks. The currently supported extensions are:
 
-* GT--
-* GregTech Community Additions
-* Gregicality Rocketry
 * Monifactory
 * Star Technology
 * Cosmic Frontiers
 * Phoenix Forge Technologies
+* TerraFirmaGreg
+* GT--
+* GregTech Community Additions
+* Gregicality Rocketry
 * GregTech Leisure(Work in Progress)
 * GregTech Odyssey(Work in Progress)
 
