@@ -207,7 +207,6 @@ public class MolDraw {
                                 } else {
                                     alloys.put(material, Optional.of(alloy.get().stream().map(pair -> {
                                         final var subMat = GTCEuAPI.materialManager.getMaterial(pair.getA().toString());
-                                        // 修复：使用 MaterialHelper.isNull() 而不是 subMat.isNull()
                                         if (Objects.isNull(subMat) || MaterialHelper.isNull(subMat))
                                             throw new RuntimeException(
                                                     "Alloy JSON contains a material that doesn't exist");

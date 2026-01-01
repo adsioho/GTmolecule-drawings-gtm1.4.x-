@@ -24,6 +24,14 @@ public class AlloysData {
         return new ResourceLocation("cosmiccore", path);
     }
 
+    private static ResourceLocation gtl(String path) {
+        return new ResourceLocation("gtl", path);
+    }
+
+    private static ResourceLocation gto(String path) {
+        return new ResourceLocation("gto", path);
+    }
+
     public static Map<ResourceLocation, Optional<List<Pair<ResourceLocation, Long>>>> alloys() {
         final Map<ResourceLocation, Optional<List<Pair<ResourceLocation, Long>>>> alloys = new HashMap<>();
         alloys.put(GTCEu.id("battery_alloy"), Optional.empty());
