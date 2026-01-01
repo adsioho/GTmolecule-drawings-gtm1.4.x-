@@ -7,8 +7,6 @@ import com.gregtechceu.gtceu.api.data.chemical.material.stack.MaterialStack;
 import com.gregtechceu.gtceu.api.data.chemical.material.stack.UnificationEntry;
 import com.gregtechceu.gtceu.api.data.tag.TagPrefix;
 
-import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 
@@ -253,35 +251,37 @@ public final class CustomMaterialLookup {
         try {
             // 使用物品的描述名作为参考
             String itemDescription = stack.getItem().getDescriptionId();
-            
+
             // 简化描述名：去掉"item."前缀和模组名部分
             String simplifiedDesc = itemDescription;
             if (simplifiedDesc.contains(".")) {
                 simplifiedDesc = simplifiedDesc.substring(simplifiedDesc.lastIndexOf('.') + 1);
             }
-            
+
             // 尝试查找材料
             Material material = GTCEuAPI.materialManager.getMaterial(simplifiedDesc);
             if (material != null && !isMaterialNull(material)) {
-                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description: {}", 
-                    material.getName());
+                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description: {}",
+                        material.getName());
                 return Optional.of(material);
             }
-            
+
             // 尝试去掉常见后缀
-            String[] suffixes = {"_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear", "_block"};
+            String[] suffixes = { "_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear",
+                    "_block" };
             for (String suffix : suffixes) {
                 if (simplifiedDesc.endsWith(suffix)) {
                     String baseName = simplifiedDesc.substring(0, simplifiedDesc.length() - suffix.length());
                     material = GTCEuAPI.materialManager.getMaterial(baseName);
                     if (material != null && !isMaterialNull(material)) {
-                        MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description (without suffix): {}", 
-                            material.getName());
+                        MolDraw.LOGGER.debug(
+                                "CustomMaterialLookup: Found material from description (without suffix): {}",
+                                material.getName());
                         return Optional.of(material);
                     }
                 }
             }
-            
+
             // 如果描述名包含"gtceu"，尝试提取材料名
             if (itemDescription.contains("gtceu")) {
                 // 尝试匹配模式：gtceu:xxx
@@ -294,8 +294,8 @@ public final class CustomMaterialLookup {
             MolDraw.LOGGER.debug("CustomMaterialLookup: Description analysis failed", t);
         }
 
-        MolDraw.LOGGER.debug("CustomMaterialLookup: No material found for item: {}", 
-            stack.getItem());
+        MolDraw.LOGGER.debug("CustomMaterialLookup: No material found for item: {}",
+                stack.getItem());
         return Optional.empty();
     }
 
