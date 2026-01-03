@@ -17,7 +17,7 @@
   "config.moldraw.option.moleculeScale": "分子缩放比例",
 
   "config.moldraw.option.alloy": "合金",
-  "config.moldraw.option.showAlloys": "显示合金成分图表",
+  "config.moldraw.option.showAlloys": "显示合金成分饼图",
   "config.moldraw.option.pieChartRadius": "合金成分饼图的半径",
   "config.moldraw.option.recursive": "递归分解合金为其组成元素",
   "config.moldraw.option.partsByMass": "按质量显示合金成分百分比"

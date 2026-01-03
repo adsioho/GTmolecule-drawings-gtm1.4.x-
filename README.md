@@ -3,6 +3,8 @@
 This clientside only mod adds molecule drawings for organic molecules from GregTech CEu and its addons and modpacks in tooltips.
 GregTechModern 1.x 特供版，去除了对高版本(gtm7+)的一些依赖，计划更新gtl/gto的化学品分子结构图，由gtl/gto群u赞助构建！
 
+ 附言："此mod的目的在于通过对许多不同产线造出的材料的分子结构式的显示，以此体会到你建造的那些生产聚苯并咪唑，凯夫拉，CL-20(66粉)之类的产线的产物在现实中的样子，给玩家一种”原来我造的这个产线能搞出来这么NB的东西“的成就感"
+
 ## Examples
 
 | Color    | Polyethylene                                                                                                                                       | Polybenzimidazole                                                                                                                                                     | Chloroform                                                                                                                                              |
