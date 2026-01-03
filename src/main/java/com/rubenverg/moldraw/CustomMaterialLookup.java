@@ -28,10 +28,10 @@ public final class CustomMaterialLookup {
      */
     private static String toCamelCase(String str) {
         if (str == null || str.isEmpty()) return str;
-        
+
         StringBuilder result = new StringBuilder();
         boolean nextUpper = false;
-        
+
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
             if (c == '_') {
@@ -45,10 +45,10 @@ public final class CustomMaterialLookup {
                 }
             }
         }
-        
+
         return result.toString();
     }
-    
+
     /**
      * 辅助方法：首字母大写
      */
@@ -63,7 +63,7 @@ public final class CustomMaterialLookup {
      */
     private static boolean isMaterialNull(Material material) {
         if (material == null) return true;
-        
+
         try {
             // 使用MaterialHelper.isNull方法
             return com.adsioho.gtm.compat.MaterialHelper.isNull(material);
@@ -145,84 +145,84 @@ public final class CustomMaterialLookup {
         if (stack == null || stack.isEmpty()) {
             return Optional.empty();
         }
-        
+
         try {
             // 获取物品的所有标签
             var tags = stack.getTags().toList();
             if (tags.isEmpty()) {
                 return Optional.empty();
             }
-            
+
             // 定义我们关心的标签前缀（针对GTCEU直接注册的物品）
             String[] tagPrefixes = {
-                "forge:dusts/",
-                "forge:ingots/", 
-                "forge:nuggets/",
-                "forge:plates/",
-                "forge:rods/",
-                "forge:blocks/",
-                "forge:gears/",
-                "forge:bolts/",
-                "forge:screws/",
-                "forge:wires/",
-                "forge:foils/",
-                "forge:gems/",
-                "forge:ores/",
-                "forge:raw_materials/"
+                    "forge:dusts/",
+                    "forge:ingots/",
+                    "forge:nuggets/",
+                    "forge:plates/",
+                    "forge:rods/",
+                    "forge:blocks/",
+                    "forge:gears/",
+                    "forge:bolts/",
+                    "forge:screws/",
+                    "forge:wires/",
+                    "forge:foils/",
+                    "forge:gems/",
+                    "forge:ores/",
+                    "forge:raw_materials/"
             };
-            
+
             for (var tag : tags) {
                 String tagName = tag.location().toString();
-                
+
                 for (String prefix : tagPrefixes) {
                     if (tagName.startsWith(prefix)) {
                         // 提取材料名
                         String materialName = tagName.substring(prefix.length());
-                        
+
                         // 尝试直接查找材料
                         Material material = GTCEuAPI.materialManager.getMaterial(materialName);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag {}", 
-                                material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag {}",
+                                    material.getName(), tagName);
                             return Optional.of(material);
                         }
-                        
+
                         // 如果找不到，尝试命名格式转换
-                        
+
                         // 1. 下划线转驼峰（steel_ingot -> steelIngot -> SteelIngot）
                         String camelCase = toCamelCase(materialName);
                         material = GTCEuAPI.materialManager.getMaterial(camelCase);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (camelCase) {}", 
-                                material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (camelCase) {}",
+                                    material.getName(), tagName);
                             return Optional.of(material);
                         }
-                        
+
                         // 2. 首字母大写
                         String capitalized = capitalize(materialName);
                         material = GTCEuAPI.materialManager.getMaterial(capitalized);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (capitalized) {}", 
-                                material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (capitalized) {}",
+                                    material.getName(), tagName);
                             return Optional.of(material);
                         }
-                        
+
                         // 3. 全部小写
                         String lowerCase = materialName.toLowerCase();
                         material = GTCEuAPI.materialManager.getMaterial(lowerCase);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (lowerCase) {}", 
-                                material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (lowerCase) {}",
+                                    material.getName(), tagName);
                             return Optional.of(material);
                         }
-                        
+
                         // 4. 去掉数字后缀（如steel_1 -> steel）
                         if (materialName.matches(".*_\\d+$")) {
                             String baseName = materialName.replaceAll("_\\d+$", "");
                             material = GTCEuAPI.materialManager.getMaterial(baseName);
                             if (material != null && !isMaterialNull(material)) {
-                                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (base name) {}", 
-                                    material.getName(), tagName);
+                                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (base name) {}",
+                                        material.getName(), tagName);
                                 return Optional.of(material);
                             }
                         }
@@ -232,7 +232,7 @@ public final class CustomMaterialLookup {
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: Tag inference failed", t);
         }
-        
+
         return Optional.empty();
     }
 
@@ -321,21 +321,21 @@ public final class CustomMaterialLookup {
         try {
             // 使用物品的描述名作为参考
             String itemDescription = stack.getItem().getDescriptionId();
-            
+
             if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
                 MolDraw.LOGGER.info("Trying description inference: {}", itemDescription);
             }
-            
+
             // 简化描述名：去掉"item."前缀和模组名部分
             String simplifiedDesc = itemDescription;
             if (simplifiedDesc.contains(".")) {
                 simplifiedDesc = simplifiedDesc.substring(simplifiedDesc.lastIndexOf('.') + 1);
             }
-            
+
             if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
                 MolDraw.LOGGER.info("Simplified description: {}", simplifiedDesc);
             }
-            
+
             // 尝试查找材料
             Material material = GTCEuAPI.materialManager.getMaterial(simplifiedDesc);
             if (material != null && !isMaterialNull(material)) {
@@ -344,17 +344,18 @@ public final class CustomMaterialLookup {
                 }
                 return Optional.of(material);
             }
-            
+
             // 尝试去掉常见后缀
-            String[] suffixes = {"_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear", "_block"};
+            String[] suffixes = { "_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear",
+                    "_block" };
             for (String suffix : suffixes) {
                 if (simplifiedDesc.endsWith(suffix)) {
                     String baseName = simplifiedDesc.substring(0, simplifiedDesc.length() - suffix.length());
                     material = GTCEuAPI.materialManager.getMaterial(baseName);
                     if (material != null && !isMaterialNull(material)) {
                         if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
-                            MolDraw.LOGGER.info("Found material from description (without suffix '{}'): {}", 
-                                suffix, material.getName());
+                            MolDraw.LOGGER.info("Found material from description (without suffix '{}'): {}",
+                                    suffix, material.getName());
                         }
                         return Optional.of(material);
                     }
@@ -367,7 +368,7 @@ public final class CustomMaterialLookup {
         if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
             MolDraw.LOGGER.info("No material found for item");
         }
-        
+
         return Optional.empty();
     }
 
