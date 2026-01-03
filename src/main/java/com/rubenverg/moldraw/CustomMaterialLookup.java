@@ -23,6 +23,56 @@ public final class CustomMaterialLookup {
         // 工具类，禁止实例化
     }
 
+    /**
+     * 辅助方法：下划线转驼峰
+     */
+    private static String toCamelCase(String str) {
+        if (str == null || str.isEmpty()) return str;
+        
+        StringBuilder result = new StringBuilder();
+        boolean nextUpper = false;
+        
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (c == '_') {
+                nextUpper = true;
+            } else {
+                if (nextUpper) {
+                    result.append(Character.toUpperCase(c));
+                    nextUpper = false;
+                } else {
+                    result.append(c);
+                }
+            }
+        }
+        
+        return result.toString();
+    }
+    
+    /**
+     * 辅助方法：首字母大写
+     */
+    private static String capitalize(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
+    }
+
+    /**
+     * 辅助方法：判断Material是否为null
+     * 使用com.adsioho.gtm.compat.MaterialHelper.isNull
+     */
+    private static boolean isMaterialNull(Material material) {
+        if (material == null) return true;
+        
+        try {
+            // 使用MaterialHelper.isNull方法
+            return com.adsioho.gtm.compat.MaterialHelper.isNull(material);
+        } catch (Throwable t) {
+            MolDraw.LOGGER.debug("CustomMaterialLookup: MaterialHelper.isNull failed", t);
+            return false;
+        }
+    }
+
     public static Optional<MaterialStack> getMaterialEntry(ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return Optional.empty();
@@ -95,84 +145,84 @@ public final class CustomMaterialLookup {
         if (stack == null || stack.isEmpty()) {
             return Optional.empty();
         }
-
+        
         try {
             // 获取物品的所有标签
             var tags = stack.getTags().toList();
             if (tags.isEmpty()) {
                 return Optional.empty();
             }
-
+            
             // 定义我们关心的标签前缀（针对GTCEU直接注册的物品）
             String[] tagPrefixes = {
-                    "forge:dusts/",
-                    "forge:ingots/",
-                    "forge:nuggets/",
-                    "forge:plates/",
-                    "forge:rods/",
-                    "forge:blocks/",
-                    "forge:gears/",
-                    "forge:bolts/",
-                    "forge:screws/",
-                    "forge:wires/",
-                    "forge:foils/",
-                    "forge:gems/",
-                    "forge:ores/",
-                    "forge:raw_materials/"
+                "forge:dusts/",
+                "forge:ingots/", 
+                "forge:nuggets/",
+                "forge:plates/",
+                "forge:rods/",
+                "forge:blocks/",
+                "forge:gears/",
+                "forge:bolts/",
+                "forge:screws/",
+                "forge:wires/",
+                "forge:foils/",
+                "forge:gems/",
+                "forge:ores/",
+                "forge:raw_materials/"
             };
-
+            
             for (var tag : tags) {
                 String tagName = tag.location().toString();
-
+                
                 for (String prefix : tagPrefixes) {
                     if (tagName.startsWith(prefix)) {
                         // 提取材料名
                         String materialName = tagName.substring(prefix.length());
-
+                        
                         // 尝试直接查找材料
                         Material material = GTCEuAPI.materialManager.getMaterial(materialName);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag {}",
-                                    material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag {}", 
+                                material.getName(), tagName);
                             return Optional.of(material);
                         }
-
+                        
                         // 如果找不到，尝试命名格式转换
-
+                        
                         // 1. 下划线转驼峰（steel_ingot -> steelIngot -> SteelIngot）
                         String camelCase = toCamelCase(materialName);
                         material = GTCEuAPI.materialManager.getMaterial(camelCase);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (camelCase) {}",
-                                    material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (camelCase) {}", 
+                                material.getName(), tagName);
                             return Optional.of(material);
                         }
-
+                        
                         // 2. 首字母大写
                         String capitalized = capitalize(materialName);
                         material = GTCEuAPI.materialManager.getMaterial(capitalized);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (capitalized) {}",
-                                    material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (capitalized) {}", 
+                                material.getName(), tagName);
                             return Optional.of(material);
                         }
-
+                        
                         // 3. 全部小写
                         String lowerCase = materialName.toLowerCase();
                         material = GTCEuAPI.materialManager.getMaterial(lowerCase);
                         if (material != null && !isMaterialNull(material)) {
-                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (lowerCase) {}",
-                                    material.getName(), tagName);
+                            MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (lowerCase) {}", 
+                                material.getName(), tagName);
                             return Optional.of(material);
                         }
-
+                        
                         // 4. 去掉数字后缀（如steel_1 -> steel）
                         if (materialName.matches(".*_\\d+$")) {
                             String baseName = materialName.replaceAll("_\\d+$", "");
                             material = GTCEuAPI.materialManager.getMaterial(baseName);
                             if (material != null && !isMaterialNull(material)) {
-                                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (base name) {}",
-                                        material.getName(), tagName);
+                                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material {} from tag (base name) {}", 
+                                    material.getName(), tagName);
                                 return Optional.of(material);
                             }
                         }
@@ -182,7 +232,7 @@ public final class CustomMaterialLookup {
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: Tag inference failed", t);
         }
-
+        
         return Optional.empty();
     }
 
@@ -195,6 +245,12 @@ public final class CustomMaterialLookup {
             return Optional.empty();
         }
 
+        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+            MolDraw.LOGGER.info("=== CustomMaterialLookup.getMaterial ===");
+            MolDraw.LOGGER.info("Item: {}", stack.getItem().toString());
+            MolDraw.LOGGER.info("Description ID: {}", stack.getItem().getDescriptionId());
+        }
+
         // 策略1: 先尝试标准GT查找
         // 放宽验证：即使没有TagPrefix也尝试
         try {
@@ -202,10 +258,13 @@ public final class CustomMaterialLookup {
             if (entry != null && entry.material != null) {
                 // 放宽：不再强制要求TagPrefix
                 if (!isMaterialNull(entry.material)) {
-                    MolDraw.LOGGER.debug("CustomMaterialLookup: Found material via UnificationEntry: {}",
-                            entry.material.getName());
+                    if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                        MolDraw.LOGGER.info("Found material via UnificationEntry: {}", entry.material.getName());
+                    }
                     return Optional.of(entry.material);
                 }
+            } else if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("UnificationEntry lookup: entry is null");
             }
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: getMaterial via UnificationEntry failed", t);
@@ -217,10 +276,13 @@ public final class CustomMaterialLookup {
             if (materialStack != null && materialStack.material() != null) {
                 Material material = materialStack.material();
                 if (!isMaterialNull(material)) {
-                    MolDraw.LOGGER.debug("CustomMaterialLookup: Found material via ChemicalHelper: {}",
-                            material.getName());
+                    if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                        MolDraw.LOGGER.info("Found material via ChemicalHelper: {}", material.getName());
+                    }
                     return Optional.of(material);
                 }
+            } else if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("ChemicalHelper.getMaterial: materialStack is null");
             }
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: ChemicalHelper.getMaterial failed", t);
@@ -229,7 +291,12 @@ public final class CustomMaterialLookup {
         // 策略3: 从物品标签推断（针对gtceu直接注册的物品）
         Optional<Material> tagMaterial = inferMaterialFromTags(stack);
         if (tagMaterial.isPresent()) {
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("Found material via tag inference: {}", tagMaterial.get().getName());
+            }
             return tagMaterial;
+        } else if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+            MolDraw.LOGGER.info("Tag inference: no material found");
         }
 
         // 策略4: 检查ITEM_MATERIAL_INFO映射
@@ -238,10 +305,13 @@ public final class CustomMaterialLookup {
             if (materialStack.isPresent()) {
                 Material material = materialStack.get().material();
                 if (!isMaterialNull(material)) {
-                    MolDraw.LOGGER.debug("CustomMaterialLookup: Found material via getMaterialEntry: {}",
-                            material.getName());
+                    if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                        MolDraw.LOGGER.info("Found material via getMaterialEntry: {}", material.getName());
+                    }
                     return Optional.of(material);
                 }
+            } else if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("getMaterialEntry: no material found");
             }
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: getMaterialEntry failed", t);
@@ -251,51 +321,53 @@ public final class CustomMaterialLookup {
         try {
             // 使用物品的描述名作为参考
             String itemDescription = stack.getItem().getDescriptionId();
-
+            
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("Trying description inference: {}", itemDescription);
+            }
+            
             // 简化描述名：去掉"item."前缀和模组名部分
             String simplifiedDesc = itemDescription;
             if (simplifiedDesc.contains(".")) {
                 simplifiedDesc = simplifiedDesc.substring(simplifiedDesc.lastIndexOf('.') + 1);
             }
-
+            
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.info("Simplified description: {}", simplifiedDesc);
+            }
+            
             // 尝试查找材料
             Material material = GTCEuAPI.materialManager.getMaterial(simplifiedDesc);
             if (material != null && !isMaterialNull(material)) {
-                MolDraw.LOGGER.debug("CustomMaterialLookup: Found material from description: {}",
-                        material.getName());
+                if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                    MolDraw.LOGGER.info("Found material from description: {}", material.getName());
+                }
                 return Optional.of(material);
             }
-
+            
             // 尝试去掉常见后缀
-            String[] suffixes = { "_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear",
-                    "_block" };
+            String[] suffixes = {"_dust", "_ingot", "_nugget", "_plate", "_rod", "_bolt", "_screw", "_gear", "_block"};
             for (String suffix : suffixes) {
                 if (simplifiedDesc.endsWith(suffix)) {
                     String baseName = simplifiedDesc.substring(0, simplifiedDesc.length() - suffix.length());
                     material = GTCEuAPI.materialManager.getMaterial(baseName);
                     if (material != null && !isMaterialNull(material)) {
-                        MolDraw.LOGGER.debug(
-                                "CustomMaterialLookup: Found material from description (without suffix): {}",
-                                material.getName());
+                        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                            MolDraw.LOGGER.info("Found material from description (without suffix '{}'): {}", 
+                                suffix, material.getName());
+                        }
                         return Optional.of(material);
                     }
-                }
-            }
-
-            // 如果描述名包含"gtceu"，尝试提取材料名
-            if (itemDescription.contains("gtceu")) {
-                // 尝试匹配模式：gtceu:xxx
-                if (itemDescription.matches(".*gtceu:([a-zA-Z0-9_]+).*")) {
-                    // 这里我们只能尝试从描述字符串中提取
-                    // 但实际上更可靠的方式是从标签推断
                 }
             }
         } catch (Throwable t) {
             MolDraw.LOGGER.debug("CustomMaterialLookup: Description analysis failed", t);
         }
 
-        MolDraw.LOGGER.debug("CustomMaterialLookup: No material found for item: {}",
-                stack.getItem());
+        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+            MolDraw.LOGGER.info("No material found for item");
+        }
+        
         return Optional.empty();
     }
 
@@ -317,21 +389,5 @@ public final class CustomMaterialLookup {
         }
 
         return Optional.empty();
-    }
-
-    /**
-     * 辅助方法：判断Material是否为null
-     * 使用com.adsioho.gtm.compat.MaterialHelper.isNull
-     */
-    private static boolean isMaterialNull(Material material) {
-        if (material == null) return true;
-
-        try {
-            // 使用MaterialHelper.isNull方法
-            return com.adsioho.gtm.compat.MaterialHelper.isNull(material);
-        } catch (Throwable t) {
-            MolDraw.LOGGER.debug("CustomMaterialLookup: MaterialHelper.isNull failed", t);
-            return false;
-        }
     }
 }
