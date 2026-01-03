@@ -181,6 +181,17 @@ public class MolDraw {
                                          ProfilerFiller profilerFiller) {
                         molecules.clear();
                         molecules.putAll(prepareResult);
+                        
+                        // 调试信息：打印加载的分子
+                        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                            MolDraw.LOGGER.info("=== Loaded Molecules ===");
+                            MolDraw.LOGGER.info("Total loaded: {}", prepareResult.size());
+                            for (Map.Entry<Material, Molecule> entry : prepareResult.entrySet()) {
+                                MolDraw.LOGGER.info("  {} -> {}", 
+                                    entry.getKey().getName(), 
+                                    entry.getValue() != null ? "Molecule loaded" : "null");
+                            }
+                        }
                     }
                 });
         event.registerReloadListener(
@@ -227,6 +238,17 @@ public class MolDraw {
                                          ResourceManager resourceManager, ProfilerFiller profilerFiller) {
                         alloys.clear();
                         alloys.putAll(prepareResult);
+                        
+                        // 调试信息：打印加载的合金
+                        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                            MolDraw.LOGGER.info("=== Loaded Alloys ===");
+                            MolDraw.LOGGER.info("Total loaded: {}", prepareResult.size());
+                            for (Map.Entry<Material, Optional<List<Pair<Material, Long>>>> entry : prepareResult.entrySet()) {
+                                MolDraw.LOGGER.info("  {} -> {}", 
+                                    entry.getKey().getName(), 
+                                    entry.getValue().isPresent() ? "Alloy loaded" : "empty");
+                            }
+                        }
                     }
                 });
     }
@@ -253,34 +275,82 @@ public class MolDraw {
 
     @SubscribeEvent
     public void tooltipGatherComponents(RenderTooltipEvent.GatherComponents event) {
-        if (!MolDrawConfig.INSTANCE.enabled) return;
+        if (!MolDrawConfig.INSTANCE.enabled) {
+            if (MolDrawConfig.INSTANCE.debugMode) {
+                MolDraw.LOGGER.debug("MolDraw is disabled");
+            }
+            return;
+        }
+
+        // 添加详细调试信息
+        boolean debug = MolDrawConfig.INSTANCE.debugMode;
+        if (debug) {
+            MolDraw.LOGGER.info("=== MolDraw Tooltip Analysis ===");
+            MolDraw.LOGGER.info("ItemStack: {}", event.getItemStack());
+            MolDraw.LOGGER.info("Item class: {}", event.getItemStack().getItem().getClass().getName());
+            MolDraw.LOGGER.info("Item Description ID: {}", event.getItemStack().getItem().getDescriptionId());
+            
+            // 打印所有标签
+            var tags = event.getItemStack().getTags().toList();
+            MolDraw.LOGGER.info("Item Tags ({}):", tags.size());
+            for (var tag : tags) {
+                MolDraw.LOGGER.info("  - {}", tag.location());
+            }
+        }
 
         Material material;
         if (event.getItemStack().getItem() instanceof BucketItem bi) {
             // 对于流体桶，使用 ChemicalHelper.getMaterial(Fluid)
             material = ChemicalHelper.getMaterial(bi.getFluid());
-            MolDraw.LOGGER.debug("Fluid bucket material lookup: {}", material);
+            if (debug) {
+                MolDraw.LOGGER.info("Fluid bucket material lookup: {}", material);
+            }
         } else {
             // 直接使用优化后的查找器
-            MolDraw.LOGGER.debug("ItemStack lookup: {}, NBT: {}",
-                    event.getItemStack().getItem().getDescriptionId(),
-                    event.getItemStack().getTag());
+            if (debug) {
+                MolDraw.LOGGER.info("ItemStack lookup: {}, NBT: {}",
+                        event.getItemStack().getItem().getDescriptionId(),
+                        event.getItemStack().getTag());
+            }
 
             // 使用新的 getMaterial 方法，直接获取 Material
             Optional<Material> materialOpt = CustomMaterialLookup.getMaterial(event.getItemStack());
 
             if (materialOpt.isPresent()) {
                 material = materialOpt.get();
-                MolDraw.LOGGER.debug("Found material: {}, Formula: {}",
-                        material.getName(), material.getChemicalFormula());
+                if (debug) {
+                    MolDraw.LOGGER.info("Found material: {}, Formula: {}, Components: {}, IsElement: {}",
+                            material.getName(), 
+                            material.getChemicalFormula(),
+                            material.getMaterialComponents(),
+                            material.isElement());
+                    
+                    // 检查是否有对应的molecule
+                    Molecule mol = getMolecule(material);
+                    MolDraw.LOGGER.info("Has molecule in cache: {}", mol != null);
+                    
+                    // 检查是否有对应的alloy
+                    List<Pair<Material, Long>> alloy = getAlloy(material);
+                    MolDraw.LOGGER.info("Has alloy in cache: {}", alloy != null);
+                    
+                    // 检查显示配置
+                    MolDraw.LOGGER.info("Config - onlyShowOnShift: {}, showMolecules: {}, showAlloys: {}",
+                            MolDrawConfig.INSTANCE.onlyShowOnShift,
+                            MolDrawConfig.INSTANCE.molecule.showMolecules,
+                            MolDrawConfig.INSTANCE.alloy.showAlloys);
+                }
             } else {
-                MolDraw.LOGGER.debug("No material found for item");
+                if (debug) {
+                    MolDraw.LOGGER.info("No material found for item");
+                }
                 return;
             }
         }
 
         if (MaterialHelper.isNull(material)) {
-            MolDraw.LOGGER.debug("Material is null or empty: {}", material);
+            if (debug) {
+                MolDraw.LOGGER.info("Material is null or empty: {}", material);
+            }
             return;
         }
 
@@ -288,41 +358,82 @@ public class MolDraw {
         final var alloy = getAlloy(material);
         final var tooltipElements = event.getTooltipElements();
 
+        if (debug) {
+            MolDraw.LOGGER.info("Molecule found: {}", mol != null);
+            MolDraw.LOGGER.info("Alloy found: {}", alloy != null);
+            MolDraw.LOGGER.info("Tooltip elements count: {}", tooltipElements.size());
+            MolDraw.LOGGER.info("Only show on shift: {}", MolDrawConfig.INSTANCE.onlyShowOnShift);
+            MolDraw.LOGGER.info("GTUtil.isShiftDown(): {}", GTUtil.isShiftDown());
+        }
+
         final var idx = IntStream.range(0, tooltipElements.size())
                 .filter(i -> tooltipElements.get(i).left()
-                        .map(tt -> tt.getString().equals(material.getChemicalFormula()))
+                        .map(tt -> {
+                            String text = tt.getString();
+                            if (debug && text.contains(material.getChemicalFormula())) {
+                                MolDraw.LOGGER.info("Found formula match at index {}: {}", i, text);
+                            }
+                            return text.equals(material.getChemicalFormula());
+                        })
                         .orElse(false))
                 .reduce((a, b) -> b);
+                
+        if (debug) {
+            MolDraw.LOGGER.info("Formula index: {}", idx.isPresent() ? idx.getAsInt() : -1);
+        }
+        
         if (!MolDrawConfig.INSTANCE.onlyShowOnShift || GTUtil.isShiftDown()) {
             if (!Objects.isNull(mol) && MolDrawConfig.INSTANCE.molecule.showMolecules) {
+                if (debug) {
+                    MolDraw.LOGGER.info("Displaying molecule tooltip");
+                }
                 if (idx.isPresent()) {
                     tooltipElements.set(idx.getAsInt(), Either.right(new MoleculeTooltipComponent(mol)));
                 } else {
                     tooltipElements.add(1, Either.right(new MoleculeTooltipComponent(mol)));
                 }
             } else if (!Objects.isNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
+                if (debug) {
+                    MolDraw.LOGGER.info("Displaying alloy tooltip");
+                }
                 if (idx.isPresent()) {
                     tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(alloy)));
                 } else {
                     tooltipElements.add(1, Either.right(new AlloyTooltipComponent(alloy)));
                 }
             } else {
+                if (debug) {
+                    MolDraw.LOGGER.info("Displaying colored formula");
+                }
                 tryColorizeFormula(material, idx, tooltipElements);
             }
         } else {
+            if (debug) {
+                MolDraw.LOGGER.info("Displaying colored formula (shift not down)");
+            }
             tryColorizeFormula(material, idx, tooltipElements);
 
             if (MolDrawConfig.INSTANCE.onlyShowOnShift) {
                 final int ttIndex = idx.orElse(1) + 1;
 
                 if (Objects.nonNull(mol) && MolDrawConfig.INSTANCE.molecule.showMolecules) {
+                    if (debug) {
+                        MolDraw.LOGGER.info("Adding shift hint for molecule");
+                    }
                     tooltipElements.add(ttIndex, Either.left(FormattedText
                             .of(Component.translatable("tooltip.moldraw.shift_view_molecule").getString())));
                 } else if (Objects.nonNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
+                    if (debug) {
+                        MolDraw.LOGGER.info("Adding shift hint for alloy");
+                    }
                     tooltipElements.add(ttIndex, Either.left(
                             FormattedText.of(Component.translatable("tooltip.moldraw.shift_view_alloy").getString())));
                 }
             }
+        }
+        
+        if (debug) {
+            MolDraw.LOGGER.info("=== End Tooltip Analysis ===");
         }
     }
 }

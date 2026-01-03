@@ -334,38 +334,4 @@ public final class CustomMaterialLookup {
             return false;
         }
     }
-
-    /**
-     * 辅助方法：下划线转驼峰
-     */
-    private static String toCamelCase(String str) {
-        if (str == null || str.isEmpty()) return str;
-
-        StringBuilder result = new StringBuilder();
-        boolean nextUpper = false;
-
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-            if (c == '_') {
-                nextUpper = true;
-            } else {
-                if (nextUpper) {
-                    result.append(Character.toUpperCase(c));
-                    nextUpper = false;
-                } else {
-                    result.append(c);
-                }
-            }
-        }
-
-        return result.toString();
-    }
-
-    /**
-     * 辅助方法：首字母大写
-     */
-    private static String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
-    }
 }
