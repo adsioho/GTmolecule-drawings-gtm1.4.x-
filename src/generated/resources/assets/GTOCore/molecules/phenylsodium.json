@@ -1,0 +1,101 @@
+{
+  "contents": [
+    {
+      "index": 0,
+      "element": "Na",
+      "u": 0.0,
+      "v": 2.2990381,
+      "type": "atom"
+    },
+    {
+      "index": 1,
+      "element": "",
+      "u": 1.5,
+      "v": 0.0,
+      "type": "atom"
+    },
+    {
+      "index": 2,
+      "element": "",
+      "u": 0.75,
+      "v": -1.2990381,
+      "type": "atom"
+    },
+    {
+      "index": 3,
+      "element": "",
+      "u": -0.75,
+      "v": -1.2990381,
+      "type": "atom"
+    },
+    {
+      "index": 4,
+      "element": "",
+      "u": -1.5,
+      "v": 0.0,
+      "type": "atom"
+    },
+    {
+      "index": 5,
+      "element": "",
+      "u": -0.75,
+      "v": 1.2990381,
+      "type": "atom"
+    },
+    {
+      "index": 6,
+      "element": "",
+      "u": 0.75,
+      "v": 1.2990381,
+      "type": "atom"
+    },
+    {
+      "a": 1,
+      "b": 2,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 2,
+      "b": 3,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 3,
+      "b": 4,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 4,
+      "b": 5,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 5,
+      "b": 6,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 1,
+      "b": 6,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    }
+  ]
+}

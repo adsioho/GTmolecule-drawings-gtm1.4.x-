@@ -1,0 +1,264 @@
+{
+  "contents": [
+    {
+      "index": 0,
+      "element": "O",
+      "u": -3.6073008,
+      "v": -0.0,
+      "type": "atom"
+    },
+    {
+      "index": 1,
+      "element": "O",
+      "u": 3.6073008,
+      "v": 0.0,
+      "type": "atom"
+    },
+    {
+      "index": 2,
+      "element": "O",
+      "u": -3.1891484,
+      "v": -2.6401103,
+      "type": "atom"
+    },
+    {
+      "index": 3,
+      "element": "O",
+      "u": -3.1891484,
+      "v": 2.6401103,
+      "type": "atom"
+    },
+    {
+      "index": 4,
+      "element": "O",
+      "u": 3.1891484,
+      "v": -2.6401103,
+      "type": "atom"
+    },
+    {
+      "index": 5,
+      "element": "O",
+      "u": 3.1891484,
+      "v": 2.6401103,
+      "type": "atom"
+    },
+    {
+      "index": 6,
+      "element": "",
+      "u": -1.2990381,
+      "v": -0.75,
+      "type": "atom"
+    },
+    {
+      "index": 7,
+      "element": "",
+      "u": -1.2990381,
+      "v": 0.75,
+      "type": "atom"
+    },
+    {
+      "index": 8,
+      "element": "",
+      "u": 1.2990381,
+      "v": -0.75,
+      "type": "atom"
+    },
+    {
+      "index": 9,
+      "element": "",
+      "u": 1.2990381,
+      "v": 0.75,
+      "type": "atom"
+    },
+    {
+      "index": 10,
+      "element": "",
+      "u": 0.0,
+      "v": -1.5,
+      "type": "atom"
+    },
+    {
+      "index": 11,
+      "element": "",
+      "u": -0.0,
+      "v": 1.5,
+      "type": "atom"
+    },
+    {
+      "index": 12,
+      "element": "",
+      "u": -2.7256229,
+      "v": -1.2135255,
+      "type": "atom"
+    },
+    {
+      "index": 13,
+      "element": "",
+      "u": -2.7256229,
+      "v": 1.2135255,
+      "type": "atom"
+    },
+    {
+      "index": 14,
+      "element": "",
+      "u": 2.7256229,
+      "v": -1.2135255,
+      "type": "atom"
+    },
+    {
+      "index": 15,
+      "element": "",
+      "u": 2.7256229,
+      "v": 1.2135255,
+      "type": "atom"
+    },
+    {
+      "a": 0,
+      "b": 12,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 0,
+      "b": 13,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 1,
+      "b": 14,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 1,
+      "b": 15,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 2,
+      "b": 12,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 3,
+      "b": 13,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 4,
+      "b": 14,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 5,
+      "b": 15,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 6,
+      "b": 7,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 6,
+      "b": 10,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 6,
+      "b": 12,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 7,
+      "b": 11,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 7,
+      "b": 13,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 8,
+      "b": 9,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 8,
+      "b": 10,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 8,
+      "b": 14,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 9,
+      "b": 11,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 9,
+      "b": 15,
+      "lines": [
+        "dotted"
+      ],
+      "type": "bond"
+    }
+  ]
+}

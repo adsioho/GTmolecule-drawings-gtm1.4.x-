@@ -1,0 +1,42 @@
+{
+  "contents": [
+    {
+      "index": 0,
+      "element": "O",
+      "u": 1.2990381,
+      "v": 0.25,
+      "type": "atom"
+    },
+    {
+      "index": 1,
+      "element": "O",
+      "u": -1.2990381,
+      "v": 0.25,
+      "type": "atom"
+    },
+    {
+      "index": 2,
+      "element": "N",
+      "u": -0.0,
+      "v": -0.5,
+      "type": "atom"
+    },
+    {
+      "a": 0,
+      "b": 2,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 1,
+      "b": 2,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    }
+  ]
+}

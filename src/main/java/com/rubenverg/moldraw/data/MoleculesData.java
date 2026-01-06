@@ -28,12 +28,8 @@ public class MoleculesData {
         return new ResourceLocation("tfg", path);
     }
 
-    private static ResourceLocation gtl(String path) {
-        return new ResourceLocation("gtlcore", path);
-    }
-
     private static ResourceLocation gto(String path) {
-        return new ResourceLocation("gtocore", path);
+        return new ResourceLocation("GTOCore", path);
     }
 
     public static Map<ResourceLocation, Molecule> molecules() {
