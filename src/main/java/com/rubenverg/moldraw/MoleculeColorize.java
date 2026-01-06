@@ -16,6 +16,8 @@ import com.adsioho.gtm.compat.MaterialHelper;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.rubenverg.moldraw.molecule.Element;
 import com.rubenverg.moldraw.molecule.MathUtils;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
@@ -46,7 +48,13 @@ public class MoleculeColorize {
         return 0.21 * red + 0.72 * green + 0.07 * blue;
     }
 
-    private static int getColorForMaterial(Material material) {
+    private static final Object2IntMap<Material> COLOR_CACHE = new Object2IntOpenHashMap<>();
+
+    public static void invalidateColorCache() {
+        COLOR_CACHE.clear();
+    }
+
+    private static int doGetColorForMaterial(Material material) {
         if (material.getMaterialARGB() == 0xffffffff && material.hasFluid() &&
                 material.getFluid() instanceof GTFluid gtFluid) {
             final var texturePath = IClientFluidTypeExtensions.of(gtFluid.getFluidType()).getStillTexture();
@@ -77,6 +85,13 @@ public class MoleculeColorize {
             return brightness(primary) > brightness(secondary) ? primary : secondary;
         }
         return material.getMaterialARGB();
+    }
+
+    public static int getColorForMaterial(Material material) {
+        if (!COLOR_CACHE.containsKey(material)) {
+            COLOR_CACHE.put(material, doGetColorForMaterial(material));
+        }
+        return COLOR_CACHE.getInt(material);
     }
 
     public static int lightenColor(int color) {
