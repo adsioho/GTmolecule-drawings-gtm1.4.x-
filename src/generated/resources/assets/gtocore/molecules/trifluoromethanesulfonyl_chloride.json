@@ -3,57 +3,57 @@
     {
       "index": 0,
       "element": "Cl",
-      "u": -0.75,
-      "v": -1.5,
+      "x": -0.75,
+      "y": -1.5,
       "type": "atom"
     },
     {
       "index": 1,
       "element": "S",
-      "u": -0.75,
-      "v": 0.0,
+      "x": -0.75,
+      "y": 0.0,
       "type": "atom"
     },
     {
       "index": 2,
       "element": "F",
-      "u": 0.75,
-      "v": -1.5,
+      "x": 0.75,
+      "y": -1.5,
       "type": "atom"
     },
     {
       "index": 3,
       "element": "F",
-      "u": 0.75,
-      "v": 1.5,
+      "x": 0.75,
+      "y": 1.5,
       "type": "atom"
     },
     {
       "index": 4,
       "element": "F",
-      "u": 2.25,
-      "v": -0.0,
+      "x": 2.25,
+      "y": -0.0,
       "type": "atom"
     },
     {
       "index": 5,
       "element": "O",
-      "u": -2.25,
-      "v": 0.0,
+      "x": -2.25,
+      "y": 0.0,
       "type": "atom"
     },
     {
       "index": 6,
       "element": "O",
-      "u": -0.75,
-      "v": 1.5,
+      "x": -0.75,
+      "y": 1.5,
       "type": "atom"
     },
     {
       "index": 7,
       "element": "",
-      "u": 0.75,
-      "v": -0.0,
+      "x": 0.75,
+      "y": -0.0,
       "type": "atom"
     },
     {
