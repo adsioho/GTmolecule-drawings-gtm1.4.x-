@@ -1,0 +1,126 @@
+{
+  "contents": [
+    {
+      "index": 0,
+      "element": "O",
+      "x": 0.0,
+      "y": -2.2145232,
+      "type": "atom"
+    },
+    {
+      "index": 1,
+      "element": "O",
+      "x": 2.6401103,
+      "y": -0.2963708,
+      "type": "atom"
+    },
+    {
+      "index": 2,
+      "element": "O",
+      "x": -2.6401103,
+      "y": -0.2963708,
+      "type": "atom"
+    },
+    {
+      "index": 3,
+      "element": "N",
+      "x": 0.0,
+      "y": -0.7145232,
+      "type": "atom"
+    },
+    {
+      "index": 4,
+      "element": "",
+      "x": 0.75,
+      "y": 1.5937394,
+      "type": "atom"
+    },
+    {
+      "index": 5,
+      "element": "",
+      "x": -0.75,
+      "y": 1.5937394,
+      "type": "atom"
+    },
+    {
+      "index": 6,
+      "element": "",
+      "x": 1.2135255,
+      "y": 0.1671546,
+      "type": "atom"
+    },
+    {
+      "index": 7,
+      "element": "",
+      "x": -1.2135255,
+      "y": 0.1671546,
+      "type": "atom"
+    },
+    {
+      "a": 0,
+      "b": 3,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 1,
+      "b": 6,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 2,
+      "b": 7,
+      "lines": [
+        "solid",
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 3,
+      "b": 6,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 3,
+      "b": 7,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 4,
+      "b": 5,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 4,
+      "b": 6,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    },
+    {
+      "a": 5,
+      "b": 7,
+      "lines": [
+        "solid"
+      ],
+      "type": "bond"
+    }
+  ]
+}
