@@ -32,8 +32,8 @@ public class AlloysData {
         return new ResourceLocation("gcyr", path);
     }
 
-    private static ResourceLocation gto(String path) {
-        return new ResourceLocation("GTOCore", path);
+    private static ResourceLocation gtocore(String path) {
+        return new ResourceLocation("gtocore", path);
     }
 
     public static Map<ResourceLocation, Optional<List<Pair<ResourceLocation, Long>>>> alloys() {
