@@ -28,12 +28,12 @@ public final class CustomMaterialLookup {
         try {
             // 使用MaterialHelper.isNull方法
             boolean result = com.adsioho.gtm.compat.MaterialHelper.isNull(material);
-            logDebug("isMaterialNull: MaterialHelper.isNull returned " + result + " for material: " + 
+            logDebug("isMaterialNull: MaterialHelper.isNull returned " + result + " for material: " +
                     (material.getName() != null ? material.getName() : "unnamed"));
             return result;
         } catch (Throwable t) {
             logDebug("CustomMaterialLookup: MaterialHelper.isNull failed", t);
-            logDebug("isMaterialNull: falling back to false for material: " + 
+            logDebug("isMaterialNull: falling back to false for material: " +
                     (material.getName() != null ? material.getName() : "unnamed"));
             return false;
         }
@@ -44,20 +44,20 @@ public final class CustomMaterialLookup {
             logDebug("getMaterialEntry: stack is null");
             return Optional.empty();
         }
-        
+
         if (stack.isEmpty()) {
             logDebug("getMaterialEntry: stack is empty");
             return Optional.empty();
         }
 
-        logDebug("getMaterialEntry: Starting lookup for item: " + stack.getItem().toString() + 
+        logDebug("getMaterialEntry: Starting lookup for item: " + stack.getItem().toString() +
                 " (Display: " + stack.getDisplayName().getString() + ")");
 
         // 方法1: 直接使用 ChemicalHelper.getMaterial(ItemStack)
         try {
             MaterialStack materialStack = ChemicalHelper.getMaterial(stack);
             if (materialStack != null && materialStack.material() != null) {
-                logDebug("getMaterialEntry: Found via ChemicalHelper.getMaterial(ItemStack): " + 
+                logDebug("getMaterialEntry: Found via ChemicalHelper.getMaterial(ItemStack): " +
                         materialStack.material().getName() + " x" + materialStack.amount());
                 return Optional.of(materialStack);
             } else {
@@ -71,7 +71,7 @@ public final class CustomMaterialLookup {
         try {
             MaterialStack materialStack = ChemicalHelper.getMaterial(stack.getItem());
             if (materialStack != null && materialStack.material() != null) {
-                logDebug("getMaterialEntry: Found via ChemicalHelper.getMaterial(ItemLike): " + 
+                logDebug("getMaterialEntry: Found via ChemicalHelper.getMaterial(ItemLike): " +
                         materialStack.material().getName() + " x" + materialStack.amount());
                 return Optional.of(materialStack);
             } else {
@@ -88,8 +88,8 @@ public final class CustomMaterialLookup {
                 TagPrefix prefix = unificationEntry.tagPrefix;
                 Material material = unificationEntry.material;
                 long amount = prefix != null ? prefix.getMaterialAmount(material) : 1;
-                logDebug("getMaterialEntry: Found via UnificationEntry: " + material.getName() + 
-                        " (TagPrefix: " + (prefix != null ? prefix.name : "null") + 
+                logDebug("getMaterialEntry: Found via UnificationEntry: " + material.getName() +
+                        " (TagPrefix: " + (prefix != null ? prefix.name : "null") +
                         ", Amount: " + amount + ")");
                 return Optional.of(new MaterialStack(material, amount));
             } else {
@@ -108,7 +108,7 @@ public final class CustomMaterialLookup {
             var itemMaterialInfoMap = field.get(null);
 
             if (itemMaterialInfoMap instanceof Map) {
-                logDebug("getMaterialEntry: ITEM_MATERIAL_INFO map size: " + 
+                logDebug("getMaterialEntry: ITEM_MATERIAL_INFO map size: " +
                         ((Map<?, ?>) itemMaterialInfoMap).size());
                 @SuppressWarnings("unchecked")
                 var info = ((Map<ItemLike, Object>) itemMaterialInfoMap).get(stack.getItem());
@@ -119,18 +119,18 @@ public final class CustomMaterialLookup {
                     var result = method.invoke(info);
                     if (result instanceof MaterialStack) {
                         MaterialStack ms = (MaterialStack) result;
-                        logDebug("getMaterialEntry: Retrieved MaterialStack: " + 
+                        logDebug("getMaterialEntry: Retrieved MaterialStack: " +
                                 ms.material().getName() + " x" + ms.amount());
                         return Optional.of(ms);
                     } else {
-                        logDebug("getMaterialEntry: getMaterial method returned non-MaterialStack: " + 
+                        logDebug("getMaterialEntry: getMaterial method returned non-MaterialStack: " +
                                 (result != null ? result.getClass().getName() : "null"));
                     }
                 } else {
                     logDebug("getMaterialEntry: No entry found in ITEM_MATERIAL_INFO for this item");
                 }
             } else {
-                logDebug("getMaterialEntry: ITEM_MATERIAL_INFO is not a Map, type: " + 
+                logDebug("getMaterialEntry: ITEM_MATERIAL_INFO is not a Map, type: " +
                         (itemMaterialInfoMap != null ? itemMaterialInfoMap.getClass().getName() : "null"));
             }
         } catch (Throwable t) {
@@ -150,7 +150,7 @@ public final class CustomMaterialLookup {
             logDebug("inferMaterialFromTags: stack is null");
             return Optional.empty();
         }
-        
+
         if (stack.isEmpty()) {
             logDebug("inferMaterialFromTags: stack is empty");
             return Optional.empty();
@@ -158,7 +158,7 @@ public final class CustomMaterialLookup {
 
         try {
             logDebug("inferMaterialFromTags: Starting tag inference for item: " + stack.getItem().toString());
-            
+
             // 获取物品的所有标签
             var tags = stack.getTags().toList();
             if (tags.isEmpty()) {
@@ -200,30 +200,30 @@ public final class CustomMaterialLookup {
                     if (tagName.startsWith(prefix)) {
                         // 提取材料名
                         String materialName = tagName.substring(prefix.length());
-                        logDebug("inferMaterialFromTags: Found matching tag: " + tagName + 
+                        logDebug("inferMaterialFromTags: Found matching tag: " + tagName +
                                 ", extracted material name: " + materialName);
 
                         // 尝试直接查找材料
                         Material material = GTCEuAPI.materialManager.getMaterial(materialName);
                         if (material != null) {
-                            logDebug("inferMaterialFromTags: Found material in registry: " + 
+                            logDebug("inferMaterialFromTags: Found material in registry: " +
                                     material.getName());
                             if (!isMaterialNull(material)) {
-                                logDebug("inferMaterialFromTags: Material is valid: " + 
+                                logDebug("inferMaterialFromTags: Material is valid: " +
                                         material.getName() + " from tag " + tagName);
                                 return Optional.of(material);
                             } else {
-                                logDebug("inferMaterialFromTags: Material " + material.getName() + 
+                                logDebug("inferMaterialFromTags: Material " + material.getName() +
                                         " is considered null by isMaterialNull");
                             }
                         } else {
-                            logDebug("inferMaterialFromTags: No material found with name: " + 
+                            logDebug("inferMaterialFromTags: No material found with name: " +
                                     materialName);
                         }
                     }
                 }
             }
-            
+
             logDebug("inferMaterialFromTags: Checked " + checkedTags + " tags, no valid material found");
         } catch (Throwable t) {
             logDebug("CustomMaterialLookup: Tag inference failed", t);
@@ -241,7 +241,7 @@ public final class CustomMaterialLookup {
             logDebug("getMaterial: stack is null");
             return Optional.empty();
         }
-        
+
         if (stack.isEmpty()) {
             logDebug("getMaterial: stack is empty");
             return Optional.empty();
@@ -258,7 +258,7 @@ public final class CustomMaterialLookup {
         try {
             UnificationEntry entry = ChemicalHelper.getUnificationEntry(stack.getItem());
             if (entry != null && entry.material != null) {
-                logDebug("Found UnificationEntry: material=" + entry.material.getName() + 
+                logDebug("Found UnificationEntry: material=" + entry.material.getName() +
                         ", tagPrefix=" + (entry.tagPrefix != null ? entry.tagPrefix.name : "null"));
                 // 放宽：不再强制要求TagPrefix
                 if (!isMaterialNull(entry.material)) {
@@ -284,7 +284,7 @@ public final class CustomMaterialLookup {
             MaterialStack materialStack = ChemicalHelper.getMaterial(stack);
             if (materialStack != null && materialStack.material() != null) {
                 Material material = materialStack.material();
-                logDebug("Strategy 2 (ChemicalHelper): Found MaterialStack: " + 
+                logDebug("Strategy 2 (ChemicalHelper): Found MaterialStack: " +
                         material.getName() + " x" + materialStack.amount());
                 if (!isMaterialNull(material)) {
                     logDebug("Strategy 2 (ChemicalHelper) SUCCESS: " + material.getName());
@@ -363,12 +363,13 @@ public final class CustomMaterialLookup {
                     logDebug("  Trying suffix '" + suffix + "', base name: " + baseName);
                     material = GTCEuAPI.materialManager.getMaterial(baseName);
                     if (material != null && !isMaterialNull(material)) {
-                        logDebug("Strategy 5 (Description Inference) SUCCESS (with suffix removal): " + material.getName());
+                        logDebug("Strategy 5 (Description Inference) SUCCESS (with suffix removal): " +
+                                material.getName());
                         return Optional.of(material);
                     }
                 }
             }
-            
+
             logDebug("Strategy 5 (Description Inference): No material found");
         } catch (Throwable t) {
             logDebug("CustomMaterialLookup: Description analysis failed", t);
@@ -387,14 +388,14 @@ public final class CustomMaterialLookup {
             logDebug("getTagPrefix: stack is null");
             return Optional.empty();
         }
-        
+
         if (stack.isEmpty()) {
             logDebug("getTagPrefix: stack is empty");
             return Optional.empty();
         }
 
         logDebug("getTagPrefix: Looking up TagPrefix for item: " + stack.getItem().toString());
-        
+
         try {
             TagPrefix prefix = ChemicalHelper.getPrefix(stack.getItem());
             if (prefix != null) {
@@ -409,14 +410,14 @@ public final class CustomMaterialLookup {
 
         return Optional.empty();
     }
-    
+
     /**
      * 检查是否启用了调试模式
      */
     private static boolean isDebugEnabled() {
         return MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode;
     }
-    
+
     /**
      * 记录调试信息（仅当调试模式启用时）
      */
@@ -425,7 +426,7 @@ public final class CustomMaterialLookup {
             MolDraw.LOGGER.debug(message);
         }
     }
-    
+
     /**
      * 记录调试信息和异常（仅当调试模式启用时）
      */

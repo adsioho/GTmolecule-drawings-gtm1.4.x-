@@ -17,24 +17,25 @@ import java.lang.reflect.Method;
 public final class MaterialHelper {
 
     private MaterialHelper() { /* no instantiation */ }
-    
+
     /**
      * 调试回调接口，用于输出调试信息
      */
     @FunctionalInterface
     public interface DebugLogger {
+
         void log(String message);
     }
-    
+
     private static DebugLogger debugLogger = null;
-    
+
     /**
      * 设置调试日志记录器
      */
     public static void setDebugLogger(DebugLogger logger) {
         debugLogger = logger;
     }
-    
+
     /**
      * 记录调试信息
      */
@@ -57,7 +58,7 @@ public final class MaterialHelper {
             return true;
         }
 
-        logDebug("MaterialHelper.isNull: Starting analysis of object: " + 
+        logDebug("MaterialHelper.isNull: Starting analysis of object: " +
                 material.getClass().getName());
 
         try {
@@ -75,7 +76,8 @@ public final class MaterialHelper {
                         long longValue = ((Number) val).longValue();
                         logDebug("MaterialHelper.isNull: Method " + methodName + " returned: " + longValue);
                         if (longValue <= 0L) {
-                            logDebug("MaterialHelper.isNull: Method " + methodName + " returned <= 0, considering null");
+                            logDebug(
+                                    "MaterialHelper.isNull: Method " + methodName + " returned <= 0, considering null");
                             return true;
                         }
                     }
@@ -116,7 +118,7 @@ public final class MaterialHelper {
                 try {
                     Method m = cls.getMethod(methodName);
                     Object val = m.invoke(material);
-                    logDebug("MaterialHelper.isNull: Method " + methodName + " returned: " + 
+                    logDebug("MaterialHelper.isNull: Method " + methodName + " returned: " +
                             (val != null ? "'" + val.toString() + "'" : "null"));
                     if (val == null) {
                         logDebug("MaterialHelper.isNull: Method " + methodName + " returned null, considering null");
@@ -124,13 +126,15 @@ public final class MaterialHelper {
                     }
                     String s = val.toString().trim();
                     if (s.isEmpty()) {
-                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned empty string, considering null");
+                        logDebug("MaterialHelper.isNull: Method " + methodName +
+                                " returned empty string, considering null");
                         return true;
                     }
                     String lower = s.toLowerCase();
                     if (lower.equals("null") || lower.equals("air") || lower.equals("unknown") ||
                             lower.equals("empty")) {
-                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned '" + lower + "', considering null");
+                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned '" + lower +
+                                "', considering null");
                         return true;
                     }
                 } catch (NoSuchMethodException ignored) {
@@ -147,7 +151,7 @@ public final class MaterialHelper {
                     Field f = cls.getDeclaredField(fieldName);
                     f.setAccessible(true);
                     Object val = f.get(material);
-                    logDebug("MaterialHelper.isNull: Field " + fieldName + " value: " + 
+                    logDebug("MaterialHelper.isNull: Field " + fieldName + " value: " +
                             (val != null ? "'" + val.toString() + "'" : "null"));
                     if (val == null) {
                         logDebug("MaterialHelper.isNull: Field " + fieldName + " is null, considering null");
