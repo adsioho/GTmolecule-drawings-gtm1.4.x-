@@ -28,7 +28,7 @@ public class MoleculesData {
         return new ResourceLocation("tfg", path);
     }
 
-    private static ResourceLocation gto(String path) {
+    private static ResourceLocation gtocore(String path) {
         return new ResourceLocation("gtocore", path);
     }
 
