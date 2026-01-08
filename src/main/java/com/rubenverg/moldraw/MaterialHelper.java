@@ -17,6 +17,32 @@ import java.lang.reflect.Method;
 public final class MaterialHelper {
 
     private MaterialHelper() { /* no instantiation */ }
+    
+    /**
+     * 调试回调接口，用于输出调试信息
+     */
+    @FunctionalInterface
+    public interface DebugLogger {
+        void log(String message);
+    }
+    
+    private static DebugLogger debugLogger = null;
+    
+    /**
+     * 设置调试日志记录器
+     */
+    public static void setDebugLogger(DebugLogger logger) {
+        debugLogger = logger;
+    }
+    
+    /**
+     * 记录调试信息
+     */
+    private static void logDebug(String message) {
+        if (debugLogger != null) {
+            debugLogger.log(message);
+        }
+    }
 
     /**
      * 判断 material 是否可视为“空”。
@@ -26,7 +52,13 @@ public final class MaterialHelper {
      * @return true 如果判定为空；false 否则
      */
     public static boolean isNull(Object material) {
-        if (material == null) return true;
+        if (material == null) {
+            logDebug("MaterialHelper.isNull: input is null");
+            return true;
+        }
+
+        logDebug("MaterialHelper.isNull: Starting analysis of object: " + 
+                material.getClass().getName());
 
         try {
             Class<?> cls = material.getClass();
@@ -40,9 +72,18 @@ public final class MaterialHelper {
                     Method m = cls.getMethod(methodName);
                     Object val = m.invoke(material);
                     if (val instanceof Number) {
-                        if (((Number) val).longValue() <= 0L) return true;
+                        long longValue = ((Number) val).longValue();
+                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned: " + longValue);
+                        if (longValue <= 0L) {
+                            logDebug("MaterialHelper.isNull: Method " + methodName + " returned <= 0, considering null");
+                            return true;
+                        }
                     }
-                } catch (NoSuchMethodException ignored) {} catch (Throwable ignored) {}
+                } catch (NoSuchMethodException ignored) {
+                    logDebug("MaterialHelper.isNull: Method " + methodName + " not found");
+                } catch (Throwable t) {
+                    logDebug("MaterialHelper.isNull: Error invoking method " + methodName + ": " + t.getMessage());
+                }
             }
 
             // 1b) 也尝试查找常见字段（如 amount, stackSize, qty）
@@ -53,9 +94,18 @@ public final class MaterialHelper {
                     f.setAccessible(true);
                     Object val = f.get(material);
                     if (val instanceof Number) {
-                        if (((Number) val).longValue() <= 0L) return true;
+                        long longValue = ((Number) val).longValue();
+                        logDebug("MaterialHelper.isNull: Field " + fieldName + " value: " + longValue);
+                        if (longValue <= 0L) {
+                            logDebug("MaterialHelper.isNull: Field " + fieldName + " value <= 0, considering null");
+                            return true;
+                        }
                     }
-                } catch (NoSuchFieldException ignored) {} catch (Throwable ignored) {}
+                } catch (NoSuchFieldException ignored) {
+                    logDebug("MaterialHelper.isNull: Field " + fieldName + " not found");
+                } catch (Throwable t) {
+                    logDebug("MaterialHelper.isNull: Error accessing field " + fieldName + ": " + t.getMessage());
+                }
             }
 
             // 2) 名称类检查（若名称为 null / 空 / "null" / "air" / "unknown" 则视为空）
@@ -66,15 +116,28 @@ public final class MaterialHelper {
                 try {
                     Method m = cls.getMethod(methodName);
                     Object val = m.invoke(material);
-                    if (val == null) return true;
+                    logDebug("MaterialHelper.isNull: Method " + methodName + " returned: " + 
+                            (val != null ? "'" + val.toString() + "'" : "null"));
+                    if (val == null) {
+                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned null, considering null");
+                        return true;
+                    }
                     String s = val.toString().trim();
-                    if (s.isEmpty()) return true;
+                    if (s.isEmpty()) {
+                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned empty string, considering null");
+                        return true;
+                    }
                     String lower = s.toLowerCase();
                     if (lower.equals("null") || lower.equals("air") || lower.equals("unknown") ||
                             lower.equals("empty")) {
+                        logDebug("MaterialHelper.isNull: Method " + methodName + " returned '" + lower + "', considering null");
                         return true;
                     }
-                } catch (NoSuchMethodException ignored) {} catch (Throwable ignored) {}
+                } catch (NoSuchMethodException ignored) {
+                    logDebug("MaterialHelper.isNull: Method " + methodName + " not found");
+                } catch (Throwable t) {
+                    logDebug("MaterialHelper.isNull: Error invoking method " + methodName + ": " + t.getMessage());
+                }
             }
 
             // 2b) 字段名称检查
@@ -84,22 +147,38 @@ public final class MaterialHelper {
                     Field f = cls.getDeclaredField(fieldName);
                     f.setAccessible(true);
                     Object val = f.get(material);
-                    if (val == null) return true;
+                    logDebug("MaterialHelper.isNull: Field " + fieldName + " value: " + 
+                            (val != null ? "'" + val.toString() + "'" : "null"));
+                    if (val == null) {
+                        logDebug("MaterialHelper.isNull: Field " + fieldName + " is null, considering null");
+                        return true;
+                    }
                     String s = val.toString().trim();
-                    if (s.isEmpty()) return true;
+                    if (s.isEmpty()) {
+                        logDebug("MaterialHelper.isNull: Field " + fieldName + " is empty, considering null");
+                        return true;
+                    }
                     String lower = s.toLowerCase();
                     if (lower.equals("null") || lower.equals("air") || lower.equals("unknown") ||
                             lower.equals("empty")) {
+                        logDebug("MaterialHelper.isNull: Field " + fieldName + " is '" + lower + "', considering null");
                         return true;
                     }
-                } catch (NoSuchFieldException ignored) {} catch (Throwable ignored) {}
+                } catch (NoSuchFieldException ignored) {
+                    logDebug("MaterialHelper.isNull: Field " + fieldName + " not found");
+                } catch (Throwable t) {
+                    logDebug("MaterialHelper.isNull: Error accessing field " + fieldName + ": " + t.getMessage());
+                }
             }
+
+            logDebug("MaterialHelper.isNull: Object passed all null checks, considering non-null");
+            return false;
 
         } catch (Throwable t) {
             // 任何反射异常都不应抛出，保持兼容：无法判定 -> 返回 false（认为非空）
-            // 可将日志记录到 debug 位置（如果项目有日志系统，可在此处调用）。
+            logDebug("MaterialHelper.isNull: Exception during analysis: " + t.getMessage());
+            logDebug("MaterialHelper.isNull: Falling back to false (non-null)");
+            return false;
         }
-
-        return false;
     }
 }
