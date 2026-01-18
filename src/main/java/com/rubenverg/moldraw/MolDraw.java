@@ -281,6 +281,17 @@ public class MolDraw {
             return null;
         }
 
+        try {
+            String s = material.toString();
+            if (s != null && !s.isEmpty()) {
+                ResourceLocation rlFromString = new ResourceLocation(s);
+                if (!"minecraft".equals(rlFromString.getNamespace())) {
+                    return rlFromString;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         Object nameObj = material.getName();
         if (nameObj instanceof ResourceLocation) {
             return (ResourceLocation) nameObj;
@@ -324,16 +335,9 @@ public class MolDraw {
                 LOGGER.debug("Failed to resolve material id for {}", material, e);
             }
         }
-
-        try {
-            String s = material.toString();
-            if (s != null && !s.isEmpty()) {
-                return new ResourceLocation(s);
-            }
-        } catch (Exception ignored) {}
-
         return null;
     }
+
 
     public static @Nullable Molecule getMolecule(Material material) {
         if (material == null) {
