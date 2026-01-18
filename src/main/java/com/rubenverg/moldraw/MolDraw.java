@@ -289,8 +289,7 @@ public class MolDraw {
                     return rlFromString;
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         Object nameObj = material.getName();
         if (nameObj instanceof ResourceLocation) {
@@ -337,7 +336,6 @@ public class MolDraw {
         }
         return null;
     }
-
 
     public static @Nullable Molecule getMolecule(Material material) {
         if (material == null) {
