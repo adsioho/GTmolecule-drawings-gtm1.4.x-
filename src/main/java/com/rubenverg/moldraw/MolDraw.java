@@ -330,6 +330,14 @@ public class MolDraw {
             }
         }
 
+        try {
+            String s = material.toString();
+            if (s != null && !s.isEmpty()) {
+                return new ResourceLocation(s);
+            }
+        } catch (Exception ignored) {
+        }
+
         return null;
     }
 
