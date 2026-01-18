@@ -282,8 +282,8 @@ public class MolDraw {
         }
 
         Object nameObj = material.getName();
-        if (nameObj instanceof ResourceLocation rl) {
-            return rl;
+        if (nameObj instanceof ResourceLocation) {
+            return (ResourceLocation) nameObj;
         }
 
         if (nameObj != null) {
@@ -309,8 +309,8 @@ public class MolDraw {
                     }
                     rlField.setAccessible(true);
                     Object val = rlField.get(info);
-                    if (val instanceof ResourceLocation rl) {
-                        return rl;
+                    if (val instanceof ResourceLocation) {
+                        return (ResourceLocation) val;
                     }
                     if (val != null) {
                         try {
@@ -341,14 +341,31 @@ public class MolDraw {
             return null;
         }
 
+        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+            LOGGER.info("getMolecule: material={}, nameObj={}, class={}",
+                    material,
+                    material.getName(),
+                    material.getClass().getName());
+        }
+
         Molecule molecule = molecules.get(material);
         if (molecule != null) {
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                LOGGER.info("getMolecule: found molecule in cache for {}", material);
+            }
             return molecule;
         }
 
         ResourceLocation materialId = resolveMaterialId(material);
         if (materialId == null) {
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                LOGGER.info("getMolecule: resolveMaterialId returned null for {}", material);
+            }
             return null;
+        }
+
+        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+            LOGGER.info("getMolecule: resolved materialId={} for {}", materialId, material);
         }
 
         String name = materialId.toString();
@@ -359,6 +376,9 @@ public class MolDraw {
                 if (canonical != material) {
                     molecules.put(material, canonicalMolecule);
                 }
+                if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                    LOGGER.info("getMolecule: using canonical material {} for {}", canonical, material);
+                }
                 return canonicalMolecule;
             }
         }
@@ -366,16 +386,30 @@ public class MolDraw {
         try {
             ResourceLocation resourceId = new ResourceLocation(materialId.getNamespace(),
                     "molecules/" + materialId.getPath() + ".json");
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                LOGGER.info("getMolecule: trying resourceId={}", resourceId);
+            }
             var resourceOpt = Minecraft.getInstance().getResourceManager().getResource(resourceId);
             if (resourceOpt.isPresent()) {
+                if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                    LOGGER.info("getMolecule: resource {} is present", resourceId);
+                }
                 try (var stream = resourceOpt.get().open()) {
                     var file = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
                     Molecule loaded = gson.fromJson(file, Molecule.class);
                     if (loaded != null) {
                         Material key = canonical != null ? canonical : material;
                         molecules.put(key, loaded);
+                        if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                            LOGGER.info("getMolecule: loaded molecule from resourceId={} for material={}",
+                                    resourceId, key);
+                        }
                         return loaded;
                     }
+                }
+            } else {
+                if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                    LOGGER.info("getMolecule: resource {} not found in resource manager", resourceId);
                 }
             }
         } catch (Exception e) {
@@ -429,7 +463,8 @@ public class MolDraw {
         }
 
         Material material;
-        if (event.getItemStack().getItem() instanceof BucketItem bi) {
+        if (event.getItemStack().getItem() instanceof BucketItem) {
+            BucketItem bi = (BucketItem) event.getItemStack().getItem();
             // 对于流体桶，使用 ChemicalHelper.getMaterial(Fluid)
             material = ChemicalHelper.getMaterial(bi.getFluid());
             if (debug) {
