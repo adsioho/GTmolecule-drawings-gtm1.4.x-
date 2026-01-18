@@ -52,13 +52,11 @@ import org.jetbrains.annotations.Nullable;
 import oshi.util.tuples.Pair;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -292,8 +290,7 @@ public class MolDraw {
             String s = nameObj.toString();
             try {
                 return new ResourceLocation(s);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         try {
@@ -318,12 +315,10 @@ public class MolDraw {
                     if (val != null) {
                         try {
                             return new ResourceLocation(val.toString());
-                        } catch (Exception ignored) {
-                        }
+                        } catch (Exception ignored) {}
                     }
                 }
-            } catch (NoSuchFieldException ignored) {
-            }
+            } catch (NoSuchFieldException ignored) {}
         } catch (Exception e) {
             if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
                 LOGGER.debug("Failed to resolve material id for {}", material, e);
