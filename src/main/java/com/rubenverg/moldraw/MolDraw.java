@@ -330,8 +330,7 @@ public class MolDraw {
             if (s != null && !s.isEmpty()) {
                 return new ResourceLocation(s);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
         return null;
     }
