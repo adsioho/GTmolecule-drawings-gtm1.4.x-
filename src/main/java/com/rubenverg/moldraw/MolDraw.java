@@ -7,11 +7,13 @@ import com.gregtechceu.gtceu.api.data.chemical.material.stack.MaterialStack;
 import com.gregtechceu.gtceu.utils.GTUtil;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
+import net.minecraft.client.Minecraft;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.Unit;
@@ -54,6 +56,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -272,8 +277,111 @@ public class MolDraw {
                 });
     }
 
+    @Nullable
+    private static ResourceLocation resolveMaterialId(Material material) {
+        if (material == null) {
+            return null;
+        }
+
+        Object nameObj = material.getName();
+        if (nameObj instanceof ResourceLocation rl) {
+            return rl;
+        }
+
+        if (nameObj != null) {
+            String s = nameObj.toString();
+            try {
+                return new ResourceLocation(s);
+            } catch (Exception ignored) {
+            }
+        }
+
+        try {
+            Class<?> cls = material.getClass();
+            try {
+                Field infoField = cls.getDeclaredField("materialInfo");
+                infoField.setAccessible(true);
+                Object info = infoField.get(material);
+                if (info != null) {
+                    Class<?> infoCls = info.getClass();
+                    Field rlField;
+                    try {
+                        rlField = infoCls.getDeclaredField("resourceLocation");
+                    } catch (NoSuchFieldException e) {
+                        rlField = infoCls.getDeclaredField("id");
+                    }
+                    rlField.setAccessible(true);
+                    Object val = rlField.get(info);
+                    if (val instanceof ResourceLocation rl) {
+                        return rl;
+                    }
+                    if (val != null) {
+                        try {
+                            return new ResourceLocation(val.toString());
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            } catch (NoSuchFieldException ignored) {
+            }
+        } catch (Exception e) {
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                LOGGER.debug("Failed to resolve material id for {}", material, e);
+            }
+        }
+
+        return null;
+    }
+
     public static @Nullable Molecule getMolecule(Material material) {
-        return molecules.get(material);
+        if (material == null) {
+            return null;
+        }
+
+        Molecule molecule = molecules.get(material);
+        if (molecule != null) {
+            return molecule;
+        }
+
+        ResourceLocation materialId = resolveMaterialId(material);
+        if (materialId == null) {
+            return null;
+        }
+
+        String name = materialId.toString();
+        Material canonical = GTCEuAPI.materialManager.getMaterial(name);
+        if (canonical != null) {
+            Molecule canonicalMolecule = molecules.get(canonical);
+            if (canonicalMolecule != null) {
+                if (canonical != material) {
+                    molecules.put(material, canonicalMolecule);
+                }
+                return canonicalMolecule;
+            }
+        }
+
+        try {
+            ResourceLocation resourceId = new ResourceLocation(materialId.getNamespace(),
+                    "molecules/" + materialId.getPath() + ".json");
+            var resourceOpt = Minecraft.getInstance().getResourceManager().getResource(resourceId);
+            if (resourceOpt.isPresent()) {
+                try (var stream = resourceOpt.get().open()) {
+                    var file = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                    Molecule loaded = gson.fromJson(file, Molecule.class);
+                    if (loaded != null) {
+                        Material key = canonical != null ? canonical : material;
+                        molecules.put(key, loaded);
+                        return loaded;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                LOGGER.debug("Failed to lazily load molecule for material {}", material, e);
+            }
+        }
+
+        return null;
     }
 
     public static @Nullable List<Pair<Material, Long>> getAlloy(Material material) {
