@@ -412,6 +412,28 @@ public class MolDraw {
                 if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
                     LOGGER.info("getMolecule: resource {} not found in resource manager", resourceId);
                 }
+                String cpPath = "/assets/" + materialId.getNamespace() + "/molecules/" +
+                        materialId.getPath() + ".json";
+                if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                    LOGGER.info("getMolecule: trying classpath resource {}", cpPath);
+                }
+                try (var stream = MolDraw.class.getResourceAsStream(cpPath)) {
+                    if (stream != null) {
+                        var file = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                        Molecule loaded = gson.fromJson(file, Molecule.class);
+                        if (loaded != null) {
+                            Material key = canonical != null ? canonical : material;
+                            molecules.put(key, loaded);
+                            if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                                LOGGER.info("getMolecule: loaded molecule from classpath {} for material={}",
+                                        cpPath, key);
+                            }
+                            return loaded;
+                        }
+                    } else if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
+                        LOGGER.info("getMolecule: classpath resource {} not found", cpPath);
+                    }
+                }
             }
         } catch (Exception e) {
             if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
