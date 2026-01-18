@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        maven { url = 'https://maven.aliyun.com/repository/public' }
         maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
         mavenCentral()
     }
@@ -24,6 +25,8 @@ sourceSets {
 
 repositories {
     mavenLocal()
+    maven { url = 'https://maven.aliyun.com/repository/public' }
+    maven { url = 'https://maven.aliyun.com/repository/central' }
     mavenCentral()
     maven {
         name = 'GTCEu Maven'
