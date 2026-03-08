@@ -56,8 +56,8 @@ public class FluidHelperMixin {
                 else tooltipElements.add(1, Either.right(new MoleculeTooltipComponent(mol)));
             } else if (!Objects.isNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
                 if (idx.isPresent())
-                    tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(alloy)));
-                else tooltipElements.add(1, Either.right(new AlloyTooltipComponent(alloy)));
+                    tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(material, alloy)));
+                else tooltipElements.add(1, Either.right(new AlloyTooltipComponent(material, alloy)));
                 // } else if (material.getResourceLocation().getNamespace().equals(MolDraw.MOD_ID)) {
                 // if (idx.isPresent()) tooltipElements.set(idx.getAsInt(), Either.right(new
                 // AlloyTooltipComponent(AlloyTooltipComponent.deriveComponents(material))));

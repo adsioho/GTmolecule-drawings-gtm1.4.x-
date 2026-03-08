@@ -96,8 +96,8 @@ public class FluidEmiStackMixin {
                 else list.add(insertAt, ClientTooltipComponent.create(new MoleculeTooltipComponent(mol)));
             } else if (!Objects.isNull(alloy) && MolDrawConfig.INSTANCE.alloy.showAlloys) {
                 if (idx.isPresent())
-                    list.set(idx.getAsInt(), ClientTooltipComponent.create(new AlloyTooltipComponent(alloy)));
-                else list.add(insertAt, ClientTooltipComponent.create(new AlloyTooltipComponent(alloy)));
+                    list.set(idx.getAsInt(), ClientTooltipComponent.create(new AlloyTooltipComponent(material, alloy)));
+                else list.add(insertAt, ClientTooltipComponent.create(new AlloyTooltipComponent(material, alloy)));
                 // } else if (material.getResourceLocation().getNamespace().equals(MOD_ID)) {
                 // if (idx.isPresent()) list.set(idx.getAsInt(), ClientTooltipComponent.create(new
                 // AlloyTooltipComponent(AlloyTooltipComponent.deriveComponents(material))));

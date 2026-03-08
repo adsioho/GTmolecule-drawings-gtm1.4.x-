@@ -25,7 +25,7 @@ public class MolDrawConfig {
     public boolean enabled = true;
 
     @Configurable
-    public boolean onlyShowOnShift = false;
+    public boolean onlyShowOnShift = true;
 
     @Configurable
     public ColorConfig color = new ColorConfig();
@@ -69,6 +69,7 @@ public class MolDrawConfig {
 
         @Configurable
         @Configurable.Range(min = 25, max = 50)
+        @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
         public int pieChartRadius = 32;
 
         @Configurable
@@ -82,6 +83,7 @@ public class MolDrawConfig {
         @SuppressWarnings("unused")
         private void invalidateAlloyCache(boolean value, IValidationHandler handler) {
             AlloyTooltipComponent.invalidateComponentsCache();
+            AlloyTooltipComponent.invalidateAlloyRenderCache();
         }
     }
 

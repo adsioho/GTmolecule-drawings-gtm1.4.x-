@@ -24,7 +24,8 @@ import java.util.function.IntBinaryOperator;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) implements TooltipComponent {
+public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>> rawComponents)
+        implements TooltipComponent {
 
     private static long maybeMultiplyByMass(Material material, long count) {
         if (MolDrawConfig.INSTANCE.alloy.partsByMass) return count * material.getMass();
@@ -72,9 +73,14 @@ public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) im
     }
 
     private static final Map<Material, List<Pair<Material, Long>>> COMPONENTS_CACHE = new HashMap<>();
+    private static final Map<Material, CachedAlloyTooltipData> RENDER_CACHE = new HashMap<>();
 
     public static void invalidateComponentsCache() {
         COMPONENTS_CACHE.clear();
+    }
+
+    public static void invalidateAlloyRenderCache() {
+        RENDER_CACHE.clear();
     }
 
     public static List<Pair<Material, Long>> deriveComponents(Material material) {
@@ -84,6 +90,146 @@ public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) im
         }
         return COMPONENTS_CACHE.get(material);
     }
+
+    public static void precomputeAlloyRenderCache(Map<Material, Optional<List<Pair<Material, Long>>>> alloys) {
+        invalidateAlloyRenderCache();
+        for (final var entry : alloys.entrySet()) {
+            final var material = entry.getKey();
+            if (Objects.isNull(material)) continue;
+            final var raw = entry.getValue().orElseGet(() -> deriveComponents(material));
+            getOrBuildCachedData(material, raw);
+        }
+    }
+
+    private static CachedAlloyTooltipData getOrBuildCachedData(Material material,
+                                                               List<Pair<Material, Long>> rawComponents) {
+        final var cached = RENDER_CACHE.get(material);
+        if (cached != null) return cached;
+        final var built = buildCachedData(rawComponents);
+        RENDER_CACHE.put(material, built);
+        return built;
+    }
+
+    private static CachedAlloyTooltipData buildCachedData(List<Pair<Material, Long>> rawComponents) {
+        final int radius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+        final int baseHeight = radius * 5 / 2;
+        final var components = maybeMultiplyByMass(rawComponents);
+        final var total = components.stream().mapToLong(Pair::getB).reduce(0, Long::sum);
+        if (total <= 0) {
+            return new CachedAlloyTooltipData(baseHeight, rawComponents, components, total, List.of(), List.of(),
+                    List.of(), List.of(), List.of(), 0, 0, 0, 0);
+        }
+
+        final List<Pair<Long, Material>> s = new ArrayList<>();
+        final List<Pair<Long, Material>> c = new ArrayList<>();
+        var current = 0L;
+        for (final var comp : components) {
+            s.add(new Pair<>(current, comp.getA()));
+            c.add(new Pair<>(current, comp.getA()));
+            current += comp.getB();
+        }
+        final var stops = s.stream().map(pair -> new Pair<>(Math.PI * 2 * pair.getA() / total, pair.getB())).toList();
+
+        c.remove(0);
+        c.add(new Pair<>(total, GTMaterials.NULL));
+        final var centers = Streams
+                .zip(s.stream(), c.stream(),
+                        (begin, end) -> new Pair<>(Math.PI *
+                                (Objects.requireNonNull(begin).getA() + Objects.requireNonNull(end).getA()) / total,
+                                begin.getB()))
+                .toList();
+
+        final var font = Minecraft.getInstance().font;
+        final List<Pair<Vector2i, Material>> ts = new ArrayList<>();
+        final List<Component> textComponents = new ArrayList<>();
+        int atMostY = Integer.MAX_VALUE, atLeastY = Integer.MIN_VALUE;
+        int al = 0, ar = 0;
+        for (int i = 0; i < components.size(); i++) {
+            final var count = components.get(i).getB();
+            final var material = components.get(i).getA();
+            final var center = centers.get(i).getA();
+            final int cy = (int) (-Math.cos(center) * 0.9 * radius);
+            final var left = center > Math.PI;
+            final var ex = (left ? -1 : 1) * (radius + 10);
+            final var percentage = count * 100d / total;
+            final var percentageString = percentage < 0.1 ? "<0.1%" : "%.1f%%".formatted(percentage);
+            final var text = Component.literal(percentageString + " ")
+                    .append(MoleculeColorize.coloredFormula(new MaterialStack(material, 1), true));
+            final var width = font.width(text);
+
+            if (left) {
+                final var topY = Math.min(cy - font.lineHeight / 2, atMostY);
+                ts.add(new Pair<>(new Vector2i(ex - 5 - width, topY), material));
+                atMostY = topY - font.lineHeight - 1;
+                al = Math.max(al, width);
+            } else {
+                final var topY = Math.max(cy - font.lineHeight / 2, atLeastY);
+                ts.add(new Pair<>(new Vector2i(ex + 5, topY), material));
+                atLeastY = topY + font.lineHeight + 1;
+                ar = Math.max(ar, width);
+            }
+            textComponents.add(text);
+        }
+        final int addTop = Math.max(0, -atMostY - baseHeight / 2);
+        final int addBottom = Math.max(0, atLeastY - baseHeight / 2);
+        final int addLeft = Math.max(0, al + radius + 20 - ClientAlloyTooltipComponent.BASE_WIDTH / 2);
+        final int addRight = Math.max(0, ar + radius + 20 - ClientAlloyTooltipComponent.BASE_WIDTH / 2);
+
+        final var pieScanlines = buildPieScanlines(stops, total, radius);
+        return new CachedAlloyTooltipData(baseHeight, rawComponents, components, total, stops, centers, ts,
+                textComponents, pieScanlines, addTop, addBottom, addLeft, addRight);
+    }
+
+    private static List<Scanline> buildPieScanlines(List<Pair<Double, Material>> stops, long total, int radius) {
+        if (radius <= 0 || total <= 0 || stops.isEmpty()) return List.of();
+        final var stopAngles = new double[stops.size()];
+        final var stopColors = new int[stops.size()];
+        for (int i = 0; i < stops.size(); i++) {
+            stopAngles[i] = stops.get(i).getA();
+            stopColors[i] = MoleculeColorize.colorForMaterial(stops.get(i).getB());
+        }
+        final var result = new ArrayList<Scanline>();
+        final int r2 = radius * radius;
+        for (int y = -radius; y <= radius; y++) {
+            final int dy2 = y * y;
+            if (dy2 > r2) continue;
+            final int maxX = (int) Math.floor(Math.sqrt(r2 - dy2));
+            if (maxX < 0) continue;
+            final var segments = new ArrayList<Segment>();
+            int segmentStart = -maxX;
+            int currentColor = colorForAngle(Math.atan2(segmentStart, -y), stopAngles, stopColors);
+            for (int x = -maxX + 1; x <= maxX; x++) {
+                final int color = colorForAngle(Math.atan2(x, -y), stopAngles, stopColors);
+                if (color != currentColor) {
+                    segments.add(new Segment(segmentStart, x - 1, currentColor));
+                    segmentStart = x;
+                    currentColor = color;
+                }
+            }
+            segments.add(new Segment(segmentStart, maxX, currentColor));
+            result.add(new Scanline(y, segments));
+        }
+        return result;
+    }
+
+    private static int colorForAngle(double angle, double[] stopAngles, int[] stopColors) {
+        if (angle < 0) angle += 2 * Math.PI;
+        int idx = Arrays.binarySearch(stopAngles, angle);
+        if (idx < 0) idx = -idx - 2;
+        if (idx < 0) idx = stopColors.length - 1;
+        return stopColors[idx];
+    }
+
+    private record Segment(int startX, int endX, int color) {}
+
+    private record Scanline(int y, List<Segment> segments) {}
+
+    private record CachedAlloyTooltipData(int baseHeight, List<Pair<Material, Long>> rawComponents,
+                                          List<Pair<Material, Long>> components, long total,
+                                          List<Pair<Double, Material>> stops, List<Pair<Double, Material>> centers,
+                                          List<Pair<Vector2i, Material>> textStarts, List<Component> textComponents,
+                                          List<Scanline> pieScanlines, int addTop, int addBottom, int addLeft,
+                                          int addRight) {}
 
     @ParametersAreNonnullByDefault
     @MethodsReturnNonnullByDefault
@@ -98,70 +244,31 @@ public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) im
         public final List<Pair<Double, Material>> stops;
         public final List<Pair<Double, Material>> centers;
         public final List<Pair<Vector2i, Material>> textStarts;
+        public final List<Component> textComponents;
 
+        private final List<Scanline> pieScanlines;
         private final int addTop, addBottom;
         private final int addLeft, addRight;
 
         @SuppressWarnings("UnstableApiUsage")
         public ClientAlloyTooltipComponent(AlloyTooltipComponent component) {
-            baseHeight = MolDrawConfig.INSTANCE.alloy.pieChartRadius * 5 / 2;
+            final var cached = Objects.isNull(component.material) ?
+                    buildCachedData(component.rawComponents) :
+                    getOrBuildCachedData(component.material, component.rawComponents);
 
-            rawComponents = component.rawComponents;
-            components = maybeMultiplyByMass(rawComponents);
-            total = components.stream().mapToLong(Pair::getB).reduce(0, Long::sum);
-
-            final List<Pair<Long, Material>> s = new ArrayList<>(), c = new ArrayList<>();
-            var current = 0L;
-            for (final var comp : components) {
-                s.add(new Pair<>(current, comp.getA()));
-                c.add(new Pair<>(current, comp.getA()));
-                current += comp.getB();
-            }
-            stops = s.stream().map(pair -> new Pair<>(Math.PI * 2 * pair.getA() / total, pair.getB())).toList();
-
-            c.remove(0);
-            c.add(new Pair<>(total, GTMaterials.NULL));
-            centers = Streams
-                    .zip(s.stream(), c.stream(),
-                            (begin, end) -> new Pair<>(Math.PI *
-                                    (Objects.requireNonNull(begin).getA() + Objects.requireNonNull(end).getA()) / total,
-                                    begin.getB()))
-                    .toList();
-
-            final var font = Minecraft.getInstance().font;
-            final List<Pair<Vector2i, Material>> ts = new ArrayList<>();
-            int atMostY = Integer.MAX_VALUE, atLeastY = Integer.MIN_VALUE;
-            int al = 0, ar = 0;
-            for (int i = 0; i < components.size(); i++) {
-                final var count = components.get(i).getB();
-                final var material = components.get(i).getA();
-                final var center = centers.get(i).getA();
-                final int cy = (int) (-Math.cos(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
-                final var left = center > Math.PI;
-                final var ex = (left ? -1 : 1) * (MolDrawConfig.INSTANCE.alloy.pieChartRadius + 10);
-                final var percentage = count * 100d / total;
-                final var percentageString = percentage < 0.1 ? "<0.1%" : "%.1f%%".formatted(percentage);
-                final var text = Component.literal(percentageString + " ")
-                        .append(MoleculeColorize.coloredFormula(new MaterialStack(material, 1), true));
-                final var width = font.width(text);
-
-                if (left) {
-                    final var topY = Math.min(cy - font.lineHeight / 2, atMostY);
-                    ts.add(new Pair<>(new Vector2i(ex - 5 - width, topY), material));
-                    atMostY = topY - font.lineHeight - 1;
-                    al = Math.max(al, width);
-                } else {
-                    final var topY = Math.max(cy - font.lineHeight / 2, atLeastY);
-                    ts.add(new Pair<>(new Vector2i(ex + 5, topY), material));
-                    atLeastY = topY + font.lineHeight + 1;
-                    ar = Math.max(ar, width);
-                }
-            }
-            textStarts = ts;
-            addTop = Math.max(0, -atMostY - baseHeight / 2);
-            addBottom = Math.max(0, atLeastY - baseHeight / 2);
-            addLeft = Math.max(0, al + MolDrawConfig.INSTANCE.alloy.pieChartRadius + 20 - BASE_WIDTH / 2);
-            addRight = Math.max(0, ar + MolDrawConfig.INSTANCE.alloy.pieChartRadius + 20 - BASE_WIDTH / 2);
+            baseHeight = cached.baseHeight;
+            rawComponents = cached.rawComponents;
+            components = cached.components;
+            total = cached.total;
+            stops = cached.stops;
+            centers = cached.centers;
+            textStarts = cached.textStarts;
+            textComponents = cached.textComponents;
+            pieScanlines = cached.pieScanlines;
+            addTop = cached.addTop;
+            addBottom = cached.addBottom;
+            addLeft = cached.addLeft;
+            addRight = cached.addRight;
         }
 
         @Override
@@ -178,25 +285,16 @@ public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) im
         public void renderImage(Font font, int x, int y, GuiGraphics guiGraphics) {
             final int xm = BASE_WIDTH / 2 + addLeft + x, ym = baseHeight / 2 + addTop + y;
 
-            final IntBinaryOperator sc = (xp, yp) -> {
-                final int rx = xp - xm, ry = yp - ym;
-                final double ng = Math.atan2(rx, -ry);
-                final double angle = ng < 0 ? ng + 2 * Math.PI : ng;
-                for (int si = 1; si <= stops.size(); si++) {
-                    if (angle <= stops.get(si % stops.size()).getA())
-                        return MoleculeColorize.colorForMaterial(stops.get(si - 1).getB());
+            for (final var scanline : pieScanlines) {
+                final int yPos = ym + scanline.y;
+                for (final var segment : scanline.segments) {
+                    guiGraphics.fill(xm + segment.startX, yPos, xm + segment.endX + 1, yPos + 1, segment.color);
                 }
-                return MoleculeColorize.colorForMaterial(stops.get(stops.size() - 1).getB());
-            };
-
-            GraphicalUtils.plotCircle(xm, ym, MolDrawConfig.INSTANCE.alloy.pieChartRadius, GraphicalUtils::alwaysDraw,
-                    sc, guiGraphics);
+            }
 
             final IntBinaryOperator white = (_xp, _yp) -> 0xffffffff;
 
             for (int i = 0; i < components.size(); i++) {
-                final var count = components.get(i).getB();
-                final var material = components.get(i).getA();
                 final var center = centers.get(i).getA();
                 final var textStart = textStarts.get(i).getA();
                 final var topY = ym + textStart.y;
@@ -206,14 +304,10 @@ public record AlloyTooltipComponent(List<Pair<Material, Long>> rawComponents) im
                 final var cy = ym - (int) (Math.cos(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
                 final var left = center > Math.PI;
                 final var ex = xm + (left ? -1 : 1) * (MolDrawConfig.INSTANCE.alloy.pieChartRadius + 10);
-                final var percentage = count * 100d / total;
-                final var percentageString = percentage < 0.1 ? "<0.1%" : "%.1f%%".formatted(percentage);
-                final var text = Component.literal(percentageString + " ")
-                        .append(MoleculeColorize.coloredFormula(new MaterialStack(material, 1), true));
 
                 GraphicalUtils.plotLine(cx, cy, cx, centerY, GraphicalUtils::alwaysDraw, white, guiGraphics);
                 GraphicalUtils.plotLine(cx, centerY, ex, centerY, GraphicalUtils::alwaysDraw, white, guiGraphics);
-                guiGraphics.drawString(font, text, startX, topY, 0xffffffff);
+                guiGraphics.drawString(font, textComponents.get(i), startX, topY, 0xffffffff);
             }
         }
     }

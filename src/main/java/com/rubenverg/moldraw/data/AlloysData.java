@@ -36,6 +36,14 @@ public class AlloysData {
         return new ResourceLocation("gtocore", path);
     }
 
+    private static ResourceLocation parseResourceLocation(String value) {
+        try {
+            return new ResourceLocation(value);
+        } catch (Exception e) {
+            throw new JsonParseException("Invalid resource location: " + value, e);
+        }
+    }
+
     public static Map<ResourceLocation, Optional<List<Pair<ResourceLocation, Long>>>> alloys() {
         final Map<ResourceLocation, Optional<List<Pair<ResourceLocation, Long>>>> alloys = new HashMap<>();
         alloys.put(GTCEu.id("battery_alloy"), Optional.empty());
@@ -271,11 +279,11 @@ public class AlloysData {
         if (obj.has("components") && obj.get("components").isJsonArray()) {
             final List<Pair<ResourceLocation, Long>> list = new ArrayList<>();
             for (final var e : obj.getAsJsonArray("components").asList()) {
-                if (e.isJsonPrimitive()) list.add(new Pair<>(ResourceLocation.parse(e.getAsString()), 1L));
+                if (e.isJsonPrimitive()) list.add(new Pair<>(parseResourceLocation(e.getAsString()), 1L));
                 else if (e.isJsonArray()) {
                     final var arr = e.getAsJsonArray().asList();
                     if (arr.size() != 2) throw new JsonParseException("Invalid alloy component");
-                    list.add(new Pair<>(ResourceLocation.parse(arr.get(0).getAsString()),
+                    list.add(new Pair<>(parseResourceLocation(arr.get(0).getAsString()),
                             arr.size() == 1 ? 1 : arr.get(1).getAsLong()));
                 }
             }

@@ -259,6 +259,8 @@ public class MolDraw {
                                          ResourceManager resourceManager, ProfilerFiller profilerFiller) {
                         alloys.clear();
                         alloys.putAll(prepareResult);
+                        AlloyTooltipComponent.invalidateComponentsCache();
+                        AlloyTooltipComponent.precomputeAlloyRenderCache(prepareResult);
 
                         // 调试信息：打印加载的合金
                         if (MolDrawConfig.INSTANCE != null && MolDrawConfig.INSTANCE.debugMode) {
@@ -554,14 +556,18 @@ public class MolDraw {
             MolDraw.LOGGER.info("GTUtil.isShiftDown(): {}", GTUtil.isShiftDown());
         }
 
+        final String formula = material.getChemicalFormula();
         final var idx = IntStream.range(0, tooltipElements.size())
                 .filter(i -> tooltipElements.get(i).left()
                         .map(tt -> {
                             String text = tt.getString();
-                            if (debug && text.contains(material.getChemicalFormula())) {
+                            if (text == null || formula == null) {
+                                return false;
+                            }
+                            if (debug && text.contains(formula)) {
                                 MolDraw.LOGGER.info("Found formula match at index {}: {}", i, text);
                             }
-                            return text.equals(material.getChemicalFormula());
+                            return text.equals(formula);
                         })
                         .orElse(false))
                 .reduce((a, b) -> b);
@@ -585,9 +591,9 @@ public class MolDraw {
                     MolDraw.LOGGER.info("Displaying alloy tooltip");
                 }
                 if (idx.isPresent()) {
-                    tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(alloy)));
+                    tooltipElements.set(idx.getAsInt(), Either.right(new AlloyTooltipComponent(material, alloy)));
                 } else {
-                    tooltipElements.add(1, Either.right(new AlloyTooltipComponent(alloy)));
+                    tooltipElements.add(1, Either.right(new AlloyTooltipComponent(material, alloy)));
                 }
             } else {
                 if (debug) {
