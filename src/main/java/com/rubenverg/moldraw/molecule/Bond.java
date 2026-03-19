@@ -1,6 +1,7 @@
 package com.rubenverg.moldraw.molecule;
 
 import com.google.gson.*;
+import com.google.gson.JsonPrimitive;
 import com.rubenverg.moldraw.MolDraw;
 
 import java.util.Arrays;

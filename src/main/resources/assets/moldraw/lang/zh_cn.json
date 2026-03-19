@@ -20,5 +20,18 @@
   "config.moldraw.option.showAlloys": "显示合金成分饼图",
   "config.moldraw.option.pieChartRadius": "合金成分饼图的半径",
   "config.moldraw.option.recursive": "递归分解合金为其组成元素",
-  "config.moldraw.option.partsByMass": "按质量显示合金成分百分比"
+  "config.moldraw.option.partsByMass": "按质量显示合金成分百分比",
+
+  "moldraw.gui.mol_converter.title": "MOL转换器",
+  "moldraw.gui.mol_converter.input_path": "输入MOL文件",
+  "moldraw.gui.mol_converter.output_path": "输出目录",
+  "moldraw.gui.mol_converter.select": "选择",
+  "moldraw.gui.mol_converter.convert": "转换",
+  "moldraw.gui.mol_converter.refresh": "刷新资源",
+  "moldraw.gui.mol_converter.preview": "显示分子预览",
+  "moldraw.gui.config.title": "MolDraw配置",
+  "moldraw.gui.config.description": "配置MolDraw设置",
+  "config.moldraw.option.showMoleculePreview": "在转换器中显示分子预览",
+  "config.moldraw.option.previewX": "预览X位置",
+  "config.moldraw.option.previewY": "预览Y位置"
 }

@@ -95,4 +95,15 @@ public class MolDrawConfig {
 
     @Configurable
     public boolean debugMode = false;
+
+    @Configurable
+    public boolean showMoleculePreview = true;
+
+    @Configurable
+    @Configurable.Range(min = 0, max = 1000)
+    public int previewX = 20;
+
+    @Configurable
+    @Configurable.Range(min = 0, max = 1000)
+    public int previewY = 50;
 }

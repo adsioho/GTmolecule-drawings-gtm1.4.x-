@@ -8,6 +8,8 @@ import com.gregtechceu.gtceu.utils.GTUtil;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.client.Minecraft;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
@@ -20,12 +22,14 @@ import net.minecraft.util.Unit;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.BucketItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.data.event.GatherDataEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
@@ -33,17 +37,18 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLConstructModEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-import com.adsioho.gtm.compat.MaterialHelper;
 import com.google.common.hash.HashCode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
 import com.rubenverg.moldraw.component.AlloyTooltipComponent;
 import com.rubenverg.moldraw.component.MoleculeTooltipComponent;
 import com.rubenverg.moldraw.data.AlloysData;
 import com.rubenverg.moldraw.data.MoleculesData;
+import com.rubenverg.moldraw.gui.MOLConverterScreen;
 import com.rubenverg.moldraw.molecule.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -77,7 +82,29 @@ public class MolDraw {
             modEventBus.addListener(this::registerClientReloadListeners);
 
             MinecraftForge.EVENT_BUS.addListener(this::tooltipGatherComponents);
+            MinecraftForge.EVENT_BUS.addListener(this::registerCommands);
         });
+    }
+
+    @SubscribeEvent
+    public void registerCommands(RegisterCommandsEvent event) {
+        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+        dispatcher.register(Commands.literal("moldraw")
+                .then(Commands.literal("molconverter")
+                        .executes(context -> {
+                            Minecraft.getInstance().execute(() -> {
+                                Minecraft.getInstance().setScreen(new MOLConverterScreen());
+                            });
+                            return 1;
+                        }))
+                .then(Commands.literal("config")
+                        .executes(context -> {
+                            Minecraft.getInstance().execute(() -> {
+                                Minecraft.getInstance().setScreen(new com.rubenverg.moldraw.gui.MolDrawConfigScreen(
+                                        Minecraft.getInstance().screen));
+                            });
+                            return 1;
+                        })));
     }
 
     public static final Gson gson = new GsonBuilder()
@@ -239,7 +266,7 @@ public class MolDraw {
                                 } else {
                                     alloys.put(material, Optional.of(alloy.get().stream().map(pair -> {
                                         final var subMat = GTCEuAPI.materialManager.getMaterial(pair.getA().toString());
-                                        if (Objects.isNull(subMat) || MaterialHelper.isNull(subMat))
+                                        if (Objects.isNull(subMat))
                                             throw new RuntimeException(
                                                     "Alloy JSON contains a material that doesn't exist");
                                         return new Pair<>(subMat, pair.getB());
@@ -487,9 +514,38 @@ public class MolDraw {
             }
         }
 
+        // 过滤非原材料物品
+        ItemStack stack = event.getItemStack();
+
+        // 过滤机器物品
+        if (stack.getItem().getClass().getName().contains("MetaMachineItem")) {
+            if (debug) {
+                MolDraw.LOGGER.info("Filtered out machine item: {}", stack.getItem().getDescriptionId());
+            }
+            return;
+        }
+
+        String descriptionId = stack.getItem().getDescriptionId();
+
+        // 检查是否为机器外壳或其他非原材料物品
+        if (descriptionId.contains("machine_casing") ||
+                descriptionId.contains("casing") ||
+                descriptionId.contains("machine_parts") ||
+                descriptionId.contains("machine_block") ||
+                descriptionId.contains("structure_block") ||
+                descriptionId.contains("machine_hull") ||
+                descriptionId.contains("machine_frame") ||
+                descriptionId.contains("boiler") ||
+                descriptionId.contains("machine")) {
+            if (debug) {
+                MolDraw.LOGGER.info("Filtered out non-raw material item: {}", descriptionId);
+            }
+            return;
+        }
+
         Material material;
-        if (event.getItemStack().getItem() instanceof BucketItem) {
-            BucketItem bi = (BucketItem) event.getItemStack().getItem();
+        if (stack.getItem() instanceof BucketItem) {
+            BucketItem bi = (BucketItem) stack.getItem();
             // 对于流体桶，使用 ChemicalHelper.getMaterial(Fluid)
             material = ChemicalHelper.getMaterial(bi.getFluid());
             if (debug) {
@@ -499,12 +555,12 @@ public class MolDraw {
             // 直接使用优化后的查找器
             if (debug) {
                 MolDraw.LOGGER.info("ItemStack lookup: {}, NBT: {}",
-                        event.getItemStack().getItem().getDescriptionId(),
-                        event.getItemStack().getTag());
+                        descriptionId,
+                        stack.getTag());
             }
 
             // 使用新的 getMaterial 方法，直接获取 Material
-            Optional<Material> materialOpt = CustomMaterialLookup.getMaterial(event.getItemStack());
+            Optional<Material> materialOpt = CustomMaterialLookup.getMaterial(stack);
 
             if (materialOpt.isPresent()) {
                 material = materialOpt.get();
@@ -537,7 +593,7 @@ public class MolDraw {
             }
         }
 
-        if (MaterialHelper.isNull(material)) {
+        if (material == null) {
             if (debug) {
                 MolDraw.LOGGER.info("Material is null or empty: {}", material);
             }

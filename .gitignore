@@ -34,3 +34,7 @@ run-data/
 
 # Local JDK
 jdk/
+test.mol
+
+#Trae
+.trae/

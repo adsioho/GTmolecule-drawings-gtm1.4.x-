@@ -22,5 +22,18 @@
   "config.moldraw.option.showAlloys": "Show alloy composition charts",
   "config.moldraw.option.pieChartRadius": "Radius of the alloy composition pie chart",
   "config.moldraw.option.recursive": "Recursively decompose alloys into their constituent elements",
-  "config.moldraw.option.partsByMass": "Show percentages of alloy components by mass"
+  "config.moldraw.option.partsByMass": "Show percentages of alloy components by mass",
+
+  "moldraw.gui.mol_converter.title": "MOL Converter",
+  "moldraw.gui.mol_converter.input_path": "Input MOL Files",
+  "moldraw.gui.mol_converter.output_path": "Output Directory",
+  "moldraw.gui.mol_converter.select": "Select",
+  "moldraw.gui.mol_converter.convert": "Convert",
+  "moldraw.gui.mol_converter.refresh": "Refresh Resources",
+  "moldraw.gui.mol_converter.preview": "Show Molecule Preview",
+  "moldraw.gui.config.title": "MolDraw Configuration",
+  "moldraw.gui.config.description": "Configure MolDraw settings",
+  "config.moldraw.option.showMoleculePreview": "Show molecule preview in converter",
+  "config.moldraw.option.previewX": "Preview X position",
+  "config.moldraw.option.previewY": "Preview Y position"
 }
