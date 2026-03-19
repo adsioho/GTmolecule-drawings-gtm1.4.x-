@@ -1,5 +1,7 @@
 # GregTech Molecule Drawings
 
+English | [中文](README_zh.md)
+
 This clientside only mod adds molecule drawings for organic molecules from GregTech CEu and its addons and modpacks in tooltips.
 GregTechModern 1.x 特供版，去除了对高版本(gtm7+)的一些依赖，计划更新gtl/gto的化学品分子结构图，由gtl/gto群u赞助构建！
 

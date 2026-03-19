@@ -8,7 +8,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.adsioho.gtm.compat.MaterialHelper;
+import com.adsioho.gtm.compat.materialLookingup.MaterialHelper;
 import com.mojang.datafixers.util.Either;
 import com.rubenverg.moldraw.MolDraw;
 import com.rubenverg.moldraw.MolDrawConfig;
