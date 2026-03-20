@@ -79,6 +79,16 @@ public class MolDrawConfig {
         public int pieChartRadius = 32;
 
         @Configurable
+        @Configurable.Range(min = 3, max = 12)
+        @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
+        public int pieChartComplexity = 8;
+
+        @Configurable
+        @Configurable.Range(min = 1, max = 20)
+        @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
+        public int maxComponentsDisplayed = 10;
+
+        @Configurable
         @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
         public boolean recursive = true;
 
@@ -92,6 +102,9 @@ public class MolDrawConfig {
             AlloyTooltipComponent.invalidateAlloyRenderCache();
         }
     }
+
+    @Configurable
+    public boolean performanceMode = false;
 
     @Configurable
     public boolean debugMode = false;

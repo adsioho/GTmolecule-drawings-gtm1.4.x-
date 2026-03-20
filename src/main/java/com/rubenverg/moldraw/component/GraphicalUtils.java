@@ -90,4 +90,39 @@ public class GraphicalUtils {
                                   GuiGraphics graphics) {
         plotCircle(xm, ym, r, shouldDraw, (xp, yp) -> graphics.fill(xp, yp, xp + 1, yp + 1, color.applyAsInt(xp, yp)));
     }
+
+    /**
+     * 批量绘制水平线段
+     */
+    public static void drawHorizontalLine(int x0, int x1, int y, int color, GuiGraphics graphics) {
+        int minX = Math.min(x0, x1);
+        int maxX = Math.max(x0, x1);
+        graphics.fill(minX, y, maxX + 1, y + 1, color);
+    }
+
+    /**
+     * 批量绘制垂直线段
+     */
+    public static void drawVerticalLine(int x, int y0, int y1, int color, GuiGraphics graphics) {
+        int minY = Math.min(y0, y1);
+        int maxY = Math.max(y0, y1);
+        graphics.fill(x, minY, x + 1, maxY + 1, color);
+    }
+
+    /**
+     * 批量绘制线段，根据线段方向选择最佳绘制方式
+     */
+    public static void drawLine(int x0, int y0, int x1, int y1, int color, GuiGraphics graphics) {
+        if (x0 == x1) {
+            // 垂直线
+            drawVerticalLine(x0, y0, y1, color, graphics);
+        } else if (y0 == y1) {
+            // 水平线
+            drawHorizontalLine(x0, y0, y1, color, graphics);
+        } else {
+            // 斜线，使用原有方法
+            final IntBinaryOperator colorFunc = (xp, yp) -> color;
+            plotLine(x0, y0, x1, y1, GraphicalUtils::alwaysDraw, colorFunc, graphics);
+        }
+    }
 }

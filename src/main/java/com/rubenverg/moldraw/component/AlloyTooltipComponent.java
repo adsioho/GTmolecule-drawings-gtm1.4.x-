@@ -18,14 +18,90 @@ import org.joml.Vector2i;
 import oshi.util.tuples.Pair;
 
 import java.util.*;
-import java.util.function.IntBinaryOperator;
+import java.util.concurrent.*;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
-public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>> rawComponents)
+public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>> rawComponents, boolean expanded)
         implements TooltipComponent {
 
+    // 异步计算管理器
+    private static class AsyncCalculationManager {
+
+        private static final ExecutorService executorService = Executors.newFixedThreadPool(2, r -> {
+            Thread thread = new Thread(r, "AlloyTooltip-Calculation");
+            thread.setDaemon(true);
+            thread.setPriority(Thread.NORM_PRIORITY - 1);
+            return thread;
+        });
+
+        private static final ConcurrentMap<ComponentsCacheKey, CompletableFuture<List<Pair<Material, Long>>>> componentsFutures = new ConcurrentHashMap<>();
+        private static final ConcurrentMap<RenderCacheKey, CompletableFuture<CachedAlloyTooltipData>> renderFutures = new ConcurrentHashMap<>();
+
+        public static CompletableFuture<List<Pair<Material, Long>>> calculateComponents(Material material,
+                                                                                        boolean recursive) {
+            ComponentsCacheKey key = new ComponentsCacheKey(material, recursive);
+            return componentsFutures.computeIfAbsent(key, k -> {
+                // 先检查缓存
+                List<Pair<Material, Long>> cached = COMPONENTS_CACHE.get(k);
+                if (cached != null) {
+                    return CompletableFuture.completedFuture(cached);
+                }
+                // 提交异步任务
+                return CompletableFuture.supplyAsync(() -> {
+                    List<Pair<Material, Long>> result = doDeriveComponents(material);
+                    // 计算完成后更新缓存
+                    COMPONENTS_CACHE.put(k, result);
+                    cleanupCaches();
+                    return result;
+                }, executorService);
+            });
+        }
+
+        public static CompletableFuture<CachedAlloyTooltipData> calculateRenderData(Material material,
+                                                                                    List<Pair<Material, Long>> rawComponents,
+                                                                                    boolean expanded) {
+            boolean recursive = MolDrawConfig.INSTANCE.alloy.recursive;
+            boolean partsByMass = MolDrawConfig.INSTANCE.alloy.partsByMass;
+            int pieChartRadius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+            int pieChartComplexity = MolDrawConfig.INSTANCE.alloy.pieChartComplexity;
+            int maxComponentsDisplayed = MolDrawConfig.INSTANCE.alloy.maxComponentsDisplayed;
+            RenderCacheKey key = new RenderCacheKey(material, recursive, partsByMass, pieChartRadius,
+                    pieChartComplexity, maxComponentsDisplayed, expanded);
+
+            return renderFutures.computeIfAbsent(key, k -> {
+                // 先检查缓存
+                CachedAlloyTooltipData cached = RENDER_CACHE.get(k);
+                if (cached != null) {
+                    return CompletableFuture.completedFuture(cached);
+                }
+                // 提交异步任务
+                return CompletableFuture.supplyAsync(() -> {
+                    CachedAlloyTooltipData result = buildCachedData(rawComponents, expanded);
+                    // 计算完成后更新缓存
+                    RENDER_CACHE.put(k, result);
+                    cleanupCaches();
+                    return result;
+                }, executorService);
+            });
+        }
+
+        public static void clearFutures() {
+            componentsFutures.clear();
+            renderFutures.clear();
+        }
+    }
+
+    public AlloyTooltipComponent(Material material, List<Pair<Material, Long>> rawComponents) {
+        this(material, rawComponents, true);
+    }
+
+    public AlloyTooltipComponent toggleExpanded() {
+        return new AlloyTooltipComponent(material, rawComponents, !expanded);
+    }
+
     private static record ComponentsCacheKey(Material material, boolean recursive) {
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -40,18 +116,25 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         }
     }
 
-    private static record RenderCacheKey(Material material, boolean recursive, boolean partsByMass, int pieChartRadius) {
+    private static record RenderCacheKey(Material material, boolean recursive, boolean partsByMass,
+                                         int pieChartRadius, int pieChartComplexity, int maxComponentsDisplayed,
+                                         boolean expanded) {
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             RenderCacheKey that = (RenderCacheKey) o;
-            return recursive == that.recursive && partsByMass == that.partsByMass && pieChartRadius == that.pieChartRadius && Objects.equals(material, that.material);
+            return recursive == that.recursive && partsByMass == that.partsByMass &&
+                    pieChartRadius == that.pieChartRadius && pieChartComplexity == that.pieChartComplexity &&
+                    maxComponentsDisplayed == that.maxComponentsDisplayed && expanded == that.expanded &&
+                    Objects.equals(material, that.material);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(material, recursive, partsByMass, pieChartRadius);
+            return Objects.hash(material, recursive, partsByMass, pieChartRadius, pieChartComplexity,
+                    maxComponentsDisplayed, expanded);
         }
     }
 
@@ -122,8 +205,8 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                 .toList();
     }
 
-    private static final int MAX_COMPONENTS_CACHE_SIZE = 1000;
-    private static final int MAX_RENDER_CACHE_SIZE = 500;
+    private static final int MAX_COMPONENTS_CACHE_SIZE = 2000;
+    private static final int MAX_RENDER_CACHE_SIZE = 1000;
     private static int cacheHits = 0;
     private static int cacheMisses = 0;
 
@@ -132,10 +215,12 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
 
     public static void invalidateComponentsCache() {
         COMPONENTS_CACHE.clear();
+        AsyncCalculationManager.clearFutures();
     }
 
     public static void invalidateAlloyRenderCache() {
         RENDER_CACHE.clear();
+        AsyncCalculationManager.clearFutures();
     }
 
     public static void cleanupCaches() {
@@ -147,7 +232,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                 COMPONENTS_CACHE.remove(keys.get(i));
             }
         }
-        
+
         // 清理渲染缓存
         if (RENDER_CACHE.size() > MAX_RENDER_CACHE_SIZE) {
             // 简单实现：保留最新的条目
@@ -186,19 +271,20 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
     public static void precomputeAlloyRenderCache(Map<Material, Optional<List<Pair<Material, Long>>>> alloys) {
         // 先清理缓存，避免内存占用过高
         invalidateAlloyRenderCache();
-        
+
         // 预计算合金材料
         for (final var entry : alloys.entrySet()) {
             final var material = entry.getKey();
             if (Objects.isNull(material)) continue;
             final var raw = entry.getValue().orElseGet(() -> deriveComponents(material));
-            getOrBuildCachedData(material, raw);
+            // 只预计算展开状态
+            getOrBuildCachedData(material, raw, true);
         }
-        
+
         // 预计算常见基础材料，提高缓存命中率
         precomputeCommonMaterials();
     }
-    
+
     private static void precomputeCommonMaterials() {
         // 这里可以添加常见的基础材料进行预计算
         // 例如：铁、铜、铝等常见金属
@@ -206,32 +292,36 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
     }
 
     private static CachedAlloyTooltipData getOrBuildCachedData(Material material,
-                                                               List<Pair<Material, Long>> rawComponents) {
+                                                               List<Pair<Material, Long>> rawComponents,
+                                                               boolean expanded) {
         boolean recursive = MolDrawConfig.INSTANCE.alloy.recursive;
         boolean partsByMass = MolDrawConfig.INSTANCE.alloy.partsByMass;
         int pieChartRadius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
-        RenderCacheKey key = new RenderCacheKey(material, recursive, partsByMass, pieChartRadius);
+        int pieChartComplexity = MolDrawConfig.INSTANCE.alloy.pieChartComplexity;
+        int maxComponentsDisplayed = MolDrawConfig.INSTANCE.alloy.maxComponentsDisplayed;
+        RenderCacheKey key = new RenderCacheKey(material, recursive, partsByMass, pieChartRadius, pieChartComplexity,
+                maxComponentsDisplayed, expanded);
         final var cached = RENDER_CACHE.get(key);
         if (cached != null) {
             cacheHits++;
             return cached;
         }
         cacheMisses++;
-        final var built = buildCachedData(rawComponents);
+        final var built = buildCachedData(rawComponents, expanded);
         RENDER_CACHE.put(key, built);
         // 清理缓存，防止内存占用过高
         cleanupCaches();
         return built;
     }
 
-    private static CachedAlloyTooltipData buildCachedData(List<Pair<Material, Long>> rawComponents) {
+    private static CachedAlloyTooltipData buildCachedData(List<Pair<Material, Long>> rawComponents, boolean expanded) {
         // 基于成分数量动态调整分辨率
         final int baseRadius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
         final int componentCount = rawComponents.size();
         // 成分越多，分辨率越低，最低为16
         final int radius = Math.max(16, baseRadius - (componentCount - 1) * 2);
         final int baseHeight = radius * 5 / 2;
-        final var components = maybeMultiplyByMass(rawComponents);
+        var components = maybeMultiplyByMass(rawComponents);
         final var total = components.stream().mapToLong(Pair::getB).reduce(0, Long::sum);
         if (total <= 0) {
             return new CachedAlloyTooltipData(baseHeight, rawComponents, components, total, List.of(), List.of(),
@@ -266,7 +356,8 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
             final var percentage = count * 100d / total;
             final var percentageString = percentage < 0.1 ? "<0.1%" : "%.1f%%".formatted(percentage);
             final var text = Component.literal(percentageString + " ")
-                    .append(MoleculeColorize.coloredFormula(new MaterialStack(material, 1), true));
+                    .append(material != null ? MoleculeColorize.coloredFormula(new MaterialStack(material, 1), true) :
+                            Component.literal("其他"));
             final var width = font.width(text);
 
             if (left) {
@@ -300,15 +391,22 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         final int[] stopColors = new int[stopCount];
         for (int i = 0; i < stopCount; i++) {
             stopAngles[i] = stops.get(i).getA();
-            stopColors[i] = MoleculeColorize.colorForMaterial(stops.get(i).getB());
+            // 为"其他"成分（Material为null）分配一个默认颜色
+            Material material = stops.get(i).getB();
+            stopColors[i] = material != null ? MoleculeColorize.colorForMaterial(material) : 0xff888888; // 灰色
         }
 
+        // 获取饼图复杂度配置
+        int complexity = MolDrawConfig.INSTANCE.alloy.pieChartComplexity;
+        // 根据复杂度调整步长，复杂度越高，步长越小，绘制越精细
+        int step = Math.max(1, (int) Math.ceil(2.0 * radius / complexity));
+
         // 优化扫描线生成，减少对象创建
-        final List<Scanline> result = new ArrayList<>(radius * 2 + 1);
+        final List<Scanline> result = new ArrayList<>((2 * radius / step) + 1);
         final int r2 = radius * radius;
 
-        // 只处理可见的扫描线
-        for (int y = -radius; y <= radius; y++) {
+        // 只处理可见的扫描线，根据复杂度调整步长
+        for (int y = -radius; y <= radius; y += step) {
             final int dy2 = y * y;
             if (dy2 > r2) continue;
             final int maxX = (int) Math.floor(Math.sqrt(r2 - dy2));
@@ -380,30 +478,75 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         public final List<Pair<Double, Material>> centers;
         public final List<Pair<Vector2i, Material>> textStarts;
         public final List<Component> textComponents;
+        public final boolean expanded;
+        public final boolean isLoading;
 
         private final List<Scanline> pieScanlines;
         private final int addTop, addBottom;
         private final int addLeft, addRight;
+        private final Material material;
+        private CompletableFuture<CachedAlloyTooltipData> renderFuture;
 
         @SuppressWarnings("UnstableApiUsage")
         public ClientAlloyTooltipComponent(AlloyTooltipComponent component) {
-            final var cached = Objects.isNull(component.material) ?
-                    buildCachedData(component.rawComponents) :
-                    getOrBuildCachedData(component.material, component.rawComponents);
+            this.material = component.material;
+            this.rawComponents = component.rawComponents;
+            this.expanded = component.expanded;
 
-            baseHeight = cached.baseHeight;
-            rawComponents = cached.rawComponents;
-            components = cached.components;
-            total = cached.total;
-            stops = cached.stops;
-            centers = cached.centers;
-            textStarts = cached.textStarts;
-            textComponents = cached.textComponents;
-            pieScanlines = cached.pieScanlines;
-            addTop = cached.addTop;
-            addBottom = cached.addBottom;
-            addLeft = cached.addLeft;
-            addRight = cached.addRight;
+            // 尝试从缓存获取数据
+            CachedAlloyTooltipData cached = Objects.isNull(component.material) ?
+                    buildCachedData(component.rawComponents, component.expanded) :
+                    getOrBuildCachedData(component.material, component.rawComponents, component.expanded);
+
+            if (cached != null) {
+                // 缓存命中，直接使用
+                this.baseHeight = cached.baseHeight;
+                this.components = cached.components;
+                this.total = cached.total;
+                this.stops = cached.stops;
+                this.centers = cached.centers;
+                this.textStarts = cached.textStarts;
+                this.textComponents = cached.textComponents;
+                this.pieScanlines = cached.pieScanlines;
+                this.addTop = cached.addTop;
+                this.addBottom = cached.addBottom;
+                this.addLeft = cached.addLeft;
+                this.addRight = cached.addRight;
+                this.isLoading = false;
+            } else {
+                // 缓存未命中，使用默认值，启动异步计算
+                this.baseHeight = 80; // 默认高度
+                this.components = List.of();
+                this.total = 0;
+                this.stops = List.of();
+                this.centers = List.of();
+                this.textStarts = List.of();
+                this.textComponents = List.of();
+                this.pieScanlines = List.of();
+                this.addTop = 0;
+                this.addBottom = 0;
+                this.addLeft = 0;
+                this.addRight = 0;
+                this.isLoading = true;
+
+                // 启动异步计算
+                startAsyncCalculation();
+            }
+        }
+
+        private void startAsyncCalculation() {
+            // 启动渲染数据的异步计算
+            this.renderFuture = AsyncCalculationManager.calculateRenderData(material, rawComponents, expanded);
+
+            // 计算完成后，请求重新渲染tooltip
+            renderFuture.thenAcceptAsync(cachedData -> {
+                // 在主线程中更新UI
+                Minecraft.getInstance().execute(() -> {
+                    // 这里可以添加逻辑来通知tooltip需要重新渲染
+                    // 由于Minecraft的tooltip系统限制，我们无法直接触发重新渲染
+                    // 但计算结果已经缓存，下次渲染时会使用缓存的数据
+                });
+            });
         }
 
         @Override
@@ -419,31 +562,86 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         @Override
         public void renderImage(Font font, int x, int y, GuiGraphics guiGraphics) {
             final int xm = BASE_WIDTH / 2 + addLeft + x, ym = baseHeight / 2 + addTop + y;
+            final boolean performanceMode = MolDrawConfig.INSTANCE.performanceMode;
 
-            for (final var scanline : pieScanlines) {
-                final int yPos = ym + scanline.y;
-                for (final var segment : scanline.segments) {
-                    guiGraphics.fill(xm + segment.startX, yPos, xm + segment.endX + 1, yPos + 1, segment.color);
+            if (isLoading) {
+                // 绘制加载状态
+                String loadingText = "计算中...";
+                int textWidth = font.width(loadingText);
+                int textX = xm - textWidth / 2;
+                int textY = ym - font.lineHeight / 2;
+                guiGraphics.drawString(font, Component.literal(loadingText), textX, textY, 0xffffffff);
+            } else if (total > 0) {
+                if (performanceMode) {
+                    // 性能模式：使用简化的渲染方式
+                    int radius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+                    // 绘制简单的饼图轮廓
+                    guiGraphics.fill(xm - radius, ym - radius, xm + radius + 1, ym + radius + 1, 0xff000000);
+                    guiGraphics.fill(xm - radius + 1, ym - radius + 1, xm + radius, ym + radius, 0xffffffff);
+
+                    // 只显示前3个成分的文本
+                    int displayCount = Math.min(3, components.size());
+                    for (int i = 0; i < displayCount; i++) {
+                        final var textStart = textStarts.get(i).getA();
+                        final var topY = ym + textStart.y;
+                        final var startX = xm + textStart.x;
+                        guiGraphics.drawString(font, textComponents.get(i), startX, topY, 0xffffffff);
+                    }
+                    if (components.size() > 3) {
+                        // 显示省略信息
+                        guiGraphics.drawString(font, Component.literal("..."), xm - 10, ym + 20, 0xffffffff);
+                    }
+                } else {
+                    // 正常模式：使用完整的渲染方式
+                    for (final var scanline : pieScanlines) {
+                        final int yPos = ym + scanline.y;
+                        if (!scanline.segments.isEmpty()) {
+                            // 合并连续相同颜色的线段，减少绘制调用
+                            Segment currentSegment = scanline.segments.get(0);
+                            for (int i = 1; i < scanline.segments.size(); i++) {
+                                Segment nextSegment = scanline.segments.get(i);
+                                if (currentSegment.color() == nextSegment.color() &&
+                                        currentSegment.endX() + 1 == nextSegment.startX()) {
+                                    // 合并线段
+                                    currentSegment = new Segment(currentSegment.startX(), nextSegment.endX(),
+                                            currentSegment.color());
+                                } else {
+                                    // 绘制当前线段并开始新的线段
+                                    guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
+                                            yPos + 1, currentSegment.color());
+                                    currentSegment = nextSegment;
+                                }
+                            }
+                            // 绘制最后一个线段
+                            guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
+                                    yPos + 1,
+                                    currentSegment.color());
+                        }
+                    }
+
+                    final int whiteColor = 0xffffffff;
+
+                    for (int i = 0; i < components.size(); i++) {
+                        final var center = centers.get(i).getA();
+                        final var textStart = textStarts.get(i).getA();
+                        final var topY = ym + textStart.y;
+                        final var centerY = topY + font.lineHeight / 2;
+                        final var startX = xm + textStart.x;
+                        final var cx = xm +
+                                (int) (Math.sin(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
+                        final var cy = ym -
+                                (int) (Math.cos(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
+                        final var left = center > Math.PI;
+                        final var ex = xm + (left ? -1 : 1) * (MolDrawConfig.INSTANCE.alloy.pieChartRadius + 10);
+
+                        GraphicalUtils.drawLine(cx, cy, cx, centerY, whiteColor, guiGraphics);
+                        GraphicalUtils.drawLine(cx, centerY, ex, centerY, whiteColor, guiGraphics);
+                        guiGraphics.drawString(font, textComponents.get(i), startX, topY, whiteColor);
+                    }
                 }
             }
 
-            final IntBinaryOperator white = (_xp, _yp) -> 0xffffffff;
 
-            for (int i = 0; i < components.size(); i++) {
-                final var center = centers.get(i).getA();
-                final var textStart = textStarts.get(i).getA();
-                final var topY = ym + textStart.y;
-                final var centerY = topY + font.lineHeight / 2;
-                final var startX = xm + textStart.x;
-                final var cx = xm + (int) (Math.sin(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
-                final var cy = ym - (int) (Math.cos(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
-                final var left = center > Math.PI;
-                final var ex = xm + (left ? -1 : 1) * (MolDrawConfig.INSTANCE.alloy.pieChartRadius + 10);
-
-                GraphicalUtils.plotLine(cx, cy, cx, centerY, GraphicalUtils::alwaysDraw, white, guiGraphics);
-                GraphicalUtils.plotLine(cx, centerY, ex, centerY, GraphicalUtils::alwaysDraw, white, guiGraphics);
-                guiGraphics.drawString(font, textComponents.get(i), startX, topY, 0xffffffff);
-            }
         }
     }
 }
