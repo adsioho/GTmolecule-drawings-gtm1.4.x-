@@ -3,24 +3,51 @@
   "tooltip.moldraw.shift_view_alloy": "§7按下Shift键以显示成分",
 
   "config.moldraw.option.enabled": "启用模组",
+  "config.moldraw.option.enabled.tooltip": "控制整个模组的开启或关闭",
   "config.moldraw.option.onlyShowOnShift": "仅在按下Shift时显示结构",
+  "config.moldraw.option.onlyShowOnShift.tooltip": "启用后，分子结构和合金图表仅在按住Shift键时显示",
   "config.moldraw.option.debugMode": "调试模式",
+  "config.moldraw.option.debugMode.tooltip": "启用调试日志以进行故障排除",
 
   "config.moldraw.option.color": "颜色",
+  "config.moldraw.option.color.tooltip": "元素显示的颜色设置",
   "config.moldraw.option.colors": "彩色元素符号",
+  "config.moldraw.option.colors.tooltip": "使用标准CPK颜色显示元素符号",
   "config.moldraw.option.useMaterialColors": "使用材料颜色",
+  "config.moldraw.option.useMaterialColors.tooltip": "当可用时，使用GregTech材料颜色替代标准CPK颜色",
   "config.moldraw.option.defaultColor": "默认元素颜色",
+  "config.moldraw.option.defaultColor.tooltip": "用于没有特定颜色的元素的颜色代码（例如§e表示黄色）",
   "config.moldraw.option.minimumBrightness": "彩色元素的最小亮度",
-  
+  "config.moldraw.option.minimumBrightness.tooltip": "确保深色元素保持可见（0.0-1.0）",
+
   "config.moldraw.option.molecule": "分子",
+  "config.moldraw.option.molecule.tooltip": "分子结构显示设置",
   "config.moldraw.option.showMolecules": "显示分子结构图",
+  "config.moldraw.option.showMolecules.tooltip": "启用或禁用提示框中的分子结构显示",
   "config.moldraw.option.moleculeScale": "分子缩放比例",
+  "config.moldraw.option.moleculeScale.tooltip": "调整分子绘图的大小（10-50）",
+  "config.moldraw.option.spinMolecules": "允许分子旋转",
+  "config.moldraw.option.spinMolecules.tooltip": "启用后分子将自动旋转",
+  "config.moldraw.option.spinSpeedMultiplier": "旋转速度倍率",
+  "config.moldraw.option.spinSpeedMultiplier.tooltip": "调整分子的旋转速度",
 
   "config.moldraw.option.alloy": "合金",
+  "config.moldraw.option.alloy.tooltip": "合金成分显示设置",
   "config.moldraw.option.showAlloys": "显示合金成分饼图",
+  "config.moldraw.option.showAlloys.tooltip": "启用或禁用合金成分饼图的显示",
   "config.moldraw.option.pieChartRadius": "合金成分饼图的半径",
+  "config.moldraw.option.pieChartRadius.tooltip": "调整合金饼图的大小（25-50）",
   "config.moldraw.option.recursive": "递归分解合金为其组成元素",
+  "config.moldraw.option.recursive.tooltip": "启用后，显示最终元素组成而非中间合金",
   "config.moldraw.option.partsByMass": "按质量显示合金成分百分比",
+  "config.moldraw.option.partsByMass.tooltip": "启用后按质量显示百分比，否则按摩尔比显示",
+
+  "config.moldraw.option.showMoleculePreview": "在转换器中显示分子预览",
+  "config.moldraw.option.showMoleculePreview.tooltip": "在MOL转换器界面中显示分子预览",
+  "config.moldraw.option.previewX": "预览X位置",
+  "config.moldraw.option.previewX.tooltip": "分子预览的水平位置（0-1000）",
+  "config.moldraw.option.previewY": "预览Y位置",
+  "config.moldraw.option.previewY.tooltip": "分子预览的垂直位置（0-1000）",
 
   "moldraw.gui.mol_converter.title": "MOL转换器",
   "moldraw.gui.mol_converter.input_path": "输入MOL文件",
@@ -30,8 +57,5 @@
   "moldraw.gui.mol_converter.refresh": "刷新资源",
   "moldraw.gui.mol_converter.preview": "显示分子预览",
   "moldraw.gui.config.title": "MolDraw配置",
-  "moldraw.gui.config.description": "配置MolDraw设置",
-  "config.moldraw.option.showMoleculePreview": "在转换器中显示分子预览",
-  "config.moldraw.option.previewX": "预览X位置",
-  "config.moldraw.option.previewY": "预览Y位置"
+  "moldraw.gui.config.description": "配置MolDraw设置"
 }
