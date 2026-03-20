@@ -79,14 +79,14 @@ public class MolDrawConfig {
         public int pieChartRadius = 32;
 
         @Configurable
-        @Configurable.Range(min = 3, max = 12)
+        @Configurable.Range(min = 3, max = 256)
         @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
-        public int pieChartComplexity = 8;
+        public int pieChartComplexity = 32;
 
         @Configurable
-        @Configurable.Range(min = 1, max = 20)
+        @Configurable.Range(min = 1, max = 200)
         @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
-        public int maxComponentsDisplayed = 10;
+        public int maxComponentsDisplayed = 20;
 
         @Configurable
         @Configurable.ValueUpdateCallback(method = "invalidateAlloyCache")
@@ -104,7 +104,13 @@ public class MolDrawConfig {
     }
 
     @Configurable
-    public boolean performanceMode = false;
+    public FunConfig fun = new FunConfig();
+
+    public static class FunConfig {
+
+        @Configurable
+        public boolean aromanticBenzene = false;
+    }
 
     @Configurable
     public boolean debugMode = false;

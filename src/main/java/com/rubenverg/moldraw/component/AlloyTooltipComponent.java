@@ -348,7 +348,8 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         var components = maybeMultiplyByMass(rawComponents);
         final var total = components.stream().mapToLong(Pair::getB).reduce(0, Long::sum);
         if (total <= 0) {
-            return new CachedAlloyTooltipData(baseHeight, rawComponents, components, total, List.of(), List.of(),
+            return new CachedAlloyTooltipData(baseHeight, radius, rawComponents, components, total, List.of(),
+                    List.of(),
                     List.of(), List.of(), List.of(), 0, 0, 0, 0);
         }
 
@@ -403,7 +404,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         final int addRight = Math.max(0, ar + radius + 20 - ClientAlloyTooltipComponent.BASE_WIDTH / 2);
 
         final var pieScanlines = buildPieScanlines(stops, total, radius);
-        return new CachedAlloyTooltipData(baseHeight, rawComponents, components, total, stops, centers, ts,
+        return new CachedAlloyTooltipData(baseHeight, radius, rawComponents, components, total, stops, centers, ts,
                 textComponents, pieScanlines, addTop, addBottom, addLeft, addRight);
     }
 
@@ -423,7 +424,8 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         // 获取饼图复杂度配置
         int complexity = MolDrawConfig.INSTANCE.alloy.pieChartComplexity;
         // 根据复杂度调整步长，复杂度越高，步长越小，绘制越精细
-        int step = Math.max(1, (int) Math.ceil(2.0 * radius / complexity));
+        // 改进：使用更小的步长以获得更平滑的渲染效果
+        int step = Math.max(1, (int) Math.ceil(2.0 * radius / (complexity * 2)));
 
         // 优化扫描线生成，减少对象创建
         final List<Scanline> result = new ArrayList<>((2 * radius / step) + 1);
@@ -481,7 +483,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
 
     private record Scanline(int y, List<Segment> segments) {}
 
-    private record CachedAlloyTooltipData(int baseHeight, List<Pair<Material, Long>> rawComponents,
+    private record CachedAlloyTooltipData(int baseHeight, int radius, List<Pair<Material, Long>> rawComponents,
                                           List<Pair<Material, Long>> components, long total,
                                           List<Pair<Double, Material>> stops, List<Pair<Double, Material>> centers,
                                           List<Pair<Vector2i, Material>> textStarts, List<Component> textComponents,
@@ -493,6 +495,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
     public static class ClientAlloyTooltipComponent implements ClientTooltipComponent {
 
         public final int baseHeight;
+        public final int radius;
         public static final int BASE_WIDTH = 200;
 
         public final List<Pair<Material, Long>> rawComponents;
@@ -525,6 +528,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
             if (cached != null) {
                 // 缓存命中，直接使用
                 this.baseHeight = cached.baseHeight;
+                this.radius = cached.radius;
                 this.components = cached.components;
                 this.total = cached.total;
                 this.stops = cached.stops;
@@ -540,6 +544,7 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
             } else {
                 // 缓存未命中，使用默认值，启动异步计算
                 this.baseHeight = 80; // 默认高度
+                this.radius = 32; // 默认半径
                 this.components = List.of();
                 this.total = 0;
                 this.stops = List.of();
@@ -586,7 +591,6 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         @Override
         public void renderImage(Font font, int x, int y, GuiGraphics guiGraphics) {
             final int xm = BASE_WIDTH / 2 + addLeft + x, ym = baseHeight / 2 + addTop + y;
-            final boolean performanceMode = MolDrawConfig.INSTANCE.performanceMode;
 
             if (isLoading) {
                 // 绘制加载状态
@@ -596,72 +600,51 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                 int textY = ym - font.lineHeight / 2;
                 guiGraphics.drawString(font, Component.literal(loadingText), textX, textY, 0xffffffff);
             } else if (total > 0) {
-                if (performanceMode) {
-                    // 性能模式：使用简化的渲染方式
-                    int radius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
-                    // 绘制简单的饼图轮廓
-                    guiGraphics.fill(xm - radius, ym - radius, xm + radius + 1, ym + radius + 1, 0xff000000);
-                    guiGraphics.fill(xm - radius + 1, ym - radius + 1, xm + radius, ym + radius, 0xffffffff);
-
-                    // 只显示前3个成分的文本
-                    int displayCount = Math.min(3, components.size());
-                    for (int i = 0; i < displayCount; i++) {
-                        final var textStart = textStarts.get(i).getA();
-                        final var topY = ym + textStart.y;
-                        final var startX = xm + textStart.x;
-                        guiGraphics.drawString(font, textComponents.get(i), startX, topY, 0xffffffff);
-                    }
-                    if (components.size() > 3) {
-                        // 显示省略信息
-                        guiGraphics.drawString(font, Component.literal("..."), xm - 10, ym + 20, 0xffffffff);
-                    }
-                } else {
-                    // 正常模式：使用完整的渲染方式
-                    for (final var scanline : pieScanlines) {
-                        final int yPos = ym + scanline.y;
-                        if (!scanline.segments.isEmpty()) {
-                            // 合并连续相同颜色的线段，减少绘制调用
-                            Segment currentSegment = scanline.segments.get(0);
-                            for (int i = 1; i < scanline.segments.size(); i++) {
-                                Segment nextSegment = scanline.segments.get(i);
-                                if (currentSegment.color() == nextSegment.color() &&
-                                        currentSegment.endX() + 1 == nextSegment.startX()) {
-                                    // 合并线段
-                                    currentSegment = new Segment(currentSegment.startX(), nextSegment.endX(),
-                                            currentSegment.color());
-                                } else {
-                                    // 绘制当前线段并开始新的线段
-                                    guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
-                                            yPos + 1, currentSegment.color());
-                                    currentSegment = nextSegment;
-                                }
+                // 使用完整的渲染方式
+                for (final var scanline : pieScanlines) {
+                    final int yPos = ym + scanline.y;
+                    if (!scanline.segments.isEmpty()) {
+                        // 合并连续相同颜色的线段，减少绘制调用
+                        Segment currentSegment = scanline.segments.get(0);
+                        for (int i = 1; i < scanline.segments.size(); i++) {
+                            Segment nextSegment = scanline.segments.get(i);
+                            if (currentSegment.color() == nextSegment.color() &&
+                                    currentSegment.endX() + 1 == nextSegment.startX()) {
+                                // 合并线段
+                                currentSegment = new Segment(currentSegment.startX(), nextSegment.endX(),
+                                        currentSegment.color());
+                            } else {
+                                // 绘制当前线段并开始新的线段
+                                guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
+                                        yPos + 1, currentSegment.color());
+                                currentSegment = nextSegment;
                             }
-                            // 绘制最后一个线段
-                            guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
-                                    yPos + 1,
-                                    currentSegment.color());
                         }
+                        // 绘制最后一个线段
+                        guiGraphics.fill(xm + currentSegment.startX(), yPos, xm + currentSegment.endX() + 1,
+                                yPos + 1,
+                                currentSegment.color());
                     }
+                }
 
-                    final int whiteColor = 0xffffffff;
+                final int whiteColor = 0xffffffff;
 
-                    for (int i = 0; i < components.size(); i++) {
-                        final var center = centers.get(i).getA();
-                        final var textStart = textStarts.get(i).getA();
-                        final var topY = ym + textStart.y;
-                        final var centerY = topY + font.lineHeight / 2;
-                        final var startX = xm + textStart.x;
-                        final var cx = xm +
-                                (int) (Math.sin(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
-                        final var cy = ym -
-                                (int) (Math.cos(center) * 0.9 * MolDrawConfig.INSTANCE.alloy.pieChartRadius);
-                        final var left = center > Math.PI;
-                        final var ex = xm + (left ? -1 : 1) * (MolDrawConfig.INSTANCE.alloy.pieChartRadius + 10);
+                for (int i = 0; i < components.size(); i++) {
+                    final var center = centers.get(i).getA();
+                    final var textStart = textStarts.get(i).getA();
+                    final var topY = ym + textStart.y;
+                    final var centerY = topY + font.lineHeight / 2;
+                    final var startX = xm + textStart.x;
+                    final var cx = xm +
+                            (int) (Math.sin(center) * 0.9 * radius);
+                    final var cy = ym -
+                            (int) (Math.cos(center) * 0.9 * radius);
+                    final var left = center > Math.PI;
+                    final var ex = xm + (left ? -1 : 1) * (radius + 10);
 
-                        GraphicalUtils.drawLine(cx, cy, cx, centerY, whiteColor, guiGraphics);
-                        GraphicalUtils.drawLine(cx, centerY, ex, centerY, whiteColor, guiGraphics);
-                        guiGraphics.drawString(font, textComponents.get(i), startX, topY, whiteColor);
-                    }
+                    GraphicalUtils.drawLine(cx, cy, cx, centerY, whiteColor, guiGraphics);
+                    GraphicalUtils.drawLine(cx, centerY, ex, centerY, whiteColor, guiGraphics);
+                    guiGraphics.drawString(font, textComponents.get(i), startX, topY, whiteColor);
                 }
             }
         }

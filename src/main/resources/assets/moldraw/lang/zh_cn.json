@@ -6,8 +6,7 @@
   "config.moldraw.option.enabled.tooltip": "控制整个模组的开启或关闭",
   "config.moldraw.option.onlyShowOnShift": "仅在按下Shift时显示结构",
   "config.moldraw.option.onlyShowOnShift.tooltip": "启用后，分子结构和合金图表仅在按住Shift键时显示",
-  "config.moldraw.option.performanceMode": "性能模式",
-  "config.moldraw.option.performanceMode.tooltip": "启用后，降低渲染质量以提高性能",
+
   "config.moldraw.option.debugMode": "调试模式",
   "config.moldraw.option.debugMode.tooltip": "启用调试日志以进行故障排除",
 
@@ -40,9 +39,9 @@
   "config.moldraw.option.pieChartRadius": "合金成分饼图的半径",
   "config.moldraw.option.pieChartRadius.tooltip": "调整合金饼图的大小（25-50）",
   "config.moldraw.option.pieChartComplexity": "饼图复杂度",
-  "config.moldraw.option.pieChartComplexity.tooltip": "控制饼图的平滑度（3-12），较低的值性能更好",
+  "config.moldraw.option.pieChartComplexity.tooltip": "控制饼图的平滑度，较低的值性能更好",
   "config.moldraw.option.maxComponentsDisplayed": "成分显示数量限制",
-  "config.moldraw.option.maxComponentsDisplayed.tooltip": "限制合金成分显示的最大数量（1-20）",
+  "config.moldraw.option.maxComponentsDisplayed.tooltip": "限制合金成分显示的最大数量",
   "config.moldraw.option.recursive": "递归分解合金为其组成元素",
   "config.moldraw.option.recursive.tooltip": "启用后，显示最终元素组成而非中间合金",
   "config.moldraw.option.partsByMass": "按质量显示合金成分百分比",
