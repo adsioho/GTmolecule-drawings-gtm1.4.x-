@@ -42,31 +42,53 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         return new Pair<>(frac.getA() / gcd, frac.getB() / gcd);
     }
 
+    private static final int MAX_RECURSION_DEPTH = 10;
+
     public static List<Pair<Material, Long>> doDeriveComponents(Material material) {
+        return doDeriveComponents(material, 0);
+    }
+
+    private static List<Pair<Material, Long>> doDeriveComponents(Material material, int depth) {
         final var materialComponents = material.getMaterialComponents();
-        if (Objects.isNull(materialComponents) || materialComponents.isEmpty())
+        if (Objects.isNull(materialComponents) || materialComponents.isEmpty() || depth >= MAX_RECURSION_DEPTH)
             return List.of(new Pair<>(material, 1L));
         final Map<Material, Pair<Long, Long>> collectedComponents = new HashMap<>();
         for (final var c : materialComponents) {
             if (MolDrawConfig.INSTANCE.alloy.recursive) {
                 final var innerComponents = deriveComponents(c.material());
-                final var innerTotal = innerComponents.stream().map(Pair::getB).reduce(0L, Long::sum);
+                final var innerTotal = innerComponents.stream().mapToLong(Pair::getB).sum();
                 for (final var inner : innerComponents) {
                     collectedComponents.compute(inner.getA(),
-                            (_material, previous) -> Objects.isNull(previous) ?
-                                    simplify(new Pair<>(inner.getB() * c.amount(), innerTotal)) :
-                                    simplify(new Pair<>(previous.getA() * innerTotal + inner.getB() * previous.getB(),
-                                            innerTotal * previous.getB())));
+                            (_material, previous) -> {
+                                if (Objects.isNull(previous)) {
+                                    return simplify(new Pair<>(inner.getB() * c.amount(), innerTotal));
+                                } else {
+                                    long numerator = previous.getA() * innerTotal + inner.getB() * previous.getB();
+                                    long denominator = innerTotal * previous.getB();
+                                    return simplify(new Pair<>(numerator, denominator));
+                                }
+                            });
                 }
-            } else collectedComponents.compute(c.material(),
-                    (_material, previous) -> Objects.isNull(previous) ? new Pair<>(c.amount(), 1L) :
-                            simplify(new Pair<>(previous.getA() + c.amount() * previous.getB(), previous.getB())));
+            } else {
+                collectedComponents.compute(c.material(),
+                        (_material, previous) -> {
+                            if (Objects.isNull(previous)) {
+                                return new Pair<>(c.amount(), 1L);
+                            } else {
+                                long numerator = previous.getA() + c.amount() * previous.getB();
+                                return simplify(new Pair<>(numerator, previous.getB()));
+                            }
+                        });
+            }
         }
-        final var lcm = collectedComponents.values().stream().map(Pair::getB).reduce(1L,
-                (a, b) -> a * b / LongMath.gcd(a, b));
+        long lcm = 1;
+        for (var pair : collectedComponents.values()) {
+            lcm = lcm * pair.getB() / LongMath.gcd(lcm, pair.getB());
+        }
+        final long finalLcm = lcm;
         return collectedComponents.entrySet().stream()
                 .map(entry -> new Pair<>(entry.getKey(), entry.getValue()))
-                .map(pair -> new Pair<>(pair.getA(), pair.getB().getA() * lcm / pair.getB().getB()))
+                .map(pair -> new Pair<>(pair.getA(), pair.getB().getA() * finalLcm / pair.getB().getB()))
                 .sorted(Comparator.comparingLong((Pair<Material, Long> x) -> -maybeMultiplyByMass(x.getA(), x.getB()))
                         .thenComparing(x -> x.getA().getChemicalFormula()))
                 .toList();
