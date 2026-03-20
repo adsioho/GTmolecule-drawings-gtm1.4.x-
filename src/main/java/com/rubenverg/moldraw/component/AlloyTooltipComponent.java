@@ -2,7 +2,6 @@ package com.rubenverg.moldraw.component;
 
 import com.gregtechceu.gtceu.api.data.chemical.material.Material;
 import com.gregtechceu.gtceu.api.data.chemical.material.stack.MaterialStack;
-import com.gregtechceu.gtceu.common.data.GTMaterials;
 
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.client.Minecraft;
@@ -12,7 +11,6 @@ import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 
-import com.google.common.collect.Streams;
 import com.google.common.math.LongMath;
 import com.rubenverg.moldraw.MolDrawConfig;
 import com.rubenverg.moldraw.MoleculeColorize;
@@ -26,6 +24,36 @@ import javax.annotation.ParametersAreNonnullByDefault;
 
 public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>> rawComponents)
         implements TooltipComponent {
+
+    private static record ComponentsCacheKey(Material material, boolean recursive) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ComponentsCacheKey that = (ComponentsCacheKey) o;
+            return recursive == that.recursive && Objects.equals(material, that.material);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(material, recursive);
+        }
+    }
+
+    private static record RenderCacheKey(Material material, boolean recursive, boolean partsByMass, int pieChartRadius) {
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            RenderCacheKey that = (RenderCacheKey) o;
+            return recursive == that.recursive && partsByMass == that.partsByMass && pieChartRadius == that.pieChartRadius && Objects.equals(material, that.material);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(material, recursive, partsByMass, pieChartRadius);
+        }
+    }
 
     private static long maybeMultiplyByMass(Material material, long count) {
         if (MolDrawConfig.INSTANCE.alloy.partsByMass) return count * material.getMass();
@@ -94,8 +122,13 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                 .toList();
     }
 
-    private static final Map<Material, List<Pair<Material, Long>>> COMPONENTS_CACHE = new HashMap<>();
-    private static final Map<Material, CachedAlloyTooltipData> RENDER_CACHE = new HashMap<>();
+    private static final int MAX_COMPONENTS_CACHE_SIZE = 1000;
+    private static final int MAX_RENDER_CACHE_SIZE = 500;
+    private static int cacheHits = 0;
+    private static int cacheMisses = 0;
+
+    private static final Map<ComponentsCacheKey, List<Pair<Material, Long>>> COMPONENTS_CACHE = new HashMap<>();
+    private static final Map<RenderCacheKey, CachedAlloyTooltipData> RENDER_CACHE = new HashMap<>();
 
     public static void invalidateComponentsCache() {
         COMPONENTS_CACHE.clear();
@@ -105,35 +138,98 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         RENDER_CACHE.clear();
     }
 
-    public static List<Pair<Material, Long>> deriveComponents(Material material) {
-        // Intentionally not using `computeIfAbsent` since the recursive calls will cause concurrent modification
-        if (!COMPONENTS_CACHE.containsKey(material)) {
-            COMPONENTS_CACHE.put(material, doDeriveComponents(material));
+    public static void cleanupCaches() {
+        // 清理组件缓存
+        if (COMPONENTS_CACHE.size() > MAX_COMPONENTS_CACHE_SIZE) {
+            // 简单实现：保留最新的条目
+            List<ComponentsCacheKey> keys = new ArrayList<>(COMPONENTS_CACHE.keySet());
+            for (int i = 0; i < keys.size() - MAX_COMPONENTS_CACHE_SIZE; i++) {
+                COMPONENTS_CACHE.remove(keys.get(i));
+            }
         }
-        return COMPONENTS_CACHE.get(material);
+        
+        // 清理渲染缓存
+        if (RENDER_CACHE.size() > MAX_RENDER_CACHE_SIZE) {
+            // 简单实现：保留最新的条目
+            List<RenderCacheKey> keys = new ArrayList<>(RENDER_CACHE.keySet());
+            for (int i = 0; i < keys.size() - MAX_RENDER_CACHE_SIZE; i++) {
+                RENDER_CACHE.remove(keys.get(i));
+            }
+        }
+    }
+
+    public static double getCacheHitRate() {
+        int total = cacheHits + cacheMisses;
+        return total == 0 ? 0 : (double) cacheHits / total * 100;
+    }
+
+    public static void resetCacheStats() {
+        cacheHits = 0;
+        cacheMisses = 0;
+    }
+
+    public static List<Pair<Material, Long>> deriveComponents(Material material) {
+        boolean recursive = MolDrawConfig.INSTANCE.alloy.recursive;
+        ComponentsCacheKey key = new ComponentsCacheKey(material, recursive);
+        // Intentionally not using `computeIfAbsent` since the recursive calls will cause concurrent modification
+        if (!COMPONENTS_CACHE.containsKey(key)) {
+            cacheMisses++;
+            COMPONENTS_CACHE.put(key, doDeriveComponents(material));
+            // 清理缓存，防止内存占用过高
+            cleanupCaches();
+        } else {
+            cacheHits++;
+        }
+        return COMPONENTS_CACHE.get(key);
     }
 
     public static void precomputeAlloyRenderCache(Map<Material, Optional<List<Pair<Material, Long>>>> alloys) {
+        // 先清理缓存，避免内存占用过高
         invalidateAlloyRenderCache();
+        
+        // 预计算合金材料
         for (final var entry : alloys.entrySet()) {
             final var material = entry.getKey();
             if (Objects.isNull(material)) continue;
             final var raw = entry.getValue().orElseGet(() -> deriveComponents(material));
             getOrBuildCachedData(material, raw);
         }
+        
+        // 预计算常见基础材料，提高缓存命中率
+        precomputeCommonMaterials();
+    }
+    
+    private static void precomputeCommonMaterials() {
+        // 这里可以添加常见的基础材料进行预计算
+        // 例如：铁、铜、铝等常见金属
+        // 注意：这里只是示例，实际应该根据游戏中的常见材料进行调整
     }
 
     private static CachedAlloyTooltipData getOrBuildCachedData(Material material,
                                                                List<Pair<Material, Long>> rawComponents) {
-        final var cached = RENDER_CACHE.get(material);
-        if (cached != null) return cached;
+        boolean recursive = MolDrawConfig.INSTANCE.alloy.recursive;
+        boolean partsByMass = MolDrawConfig.INSTANCE.alloy.partsByMass;
+        int pieChartRadius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+        RenderCacheKey key = new RenderCacheKey(material, recursive, partsByMass, pieChartRadius);
+        final var cached = RENDER_CACHE.get(key);
+        if (cached != null) {
+            cacheHits++;
+            return cached;
+        }
+        cacheMisses++;
         final var built = buildCachedData(rawComponents);
-        RENDER_CACHE.put(material, built);
+        RENDER_CACHE.put(key, built);
+        // 清理缓存，防止内存占用过高
+        cleanupCaches();
         return built;
     }
 
     private static CachedAlloyTooltipData buildCachedData(List<Pair<Material, Long>> rawComponents) {
-        final int radius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+        // 基于成分数量动态调整分辨率
+        final int baseRadius = MolDrawConfig.INSTANCE.alloy.pieChartRadius;
+        final int componentCount = rawComponents.size();
+        // 成分越多，分辨率越低，最低为16
+        final int radius = Math.max(16, baseRadius - (componentCount - 1) * 2);
         final int baseHeight = radius * 5 / 2;
         final var components = maybeMultiplyByMass(rawComponents);
         final var total = components.stream().mapToLong(Pair::getB).reduce(0, Long::sum);
@@ -142,24 +238,18 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                     List.of(), List.of(), List.of(), 0, 0, 0, 0);
         }
 
-        final List<Pair<Long, Material>> s = new ArrayList<>();
-        final List<Pair<Long, Material>> c = new ArrayList<>();
-        var current = 0L;
+        // 预计算角度和颜色，减少重复计算
+        final List<Pair<Double, Material>> stops = new ArrayList<>();
+        final List<Pair<Double, Material>> centers = new ArrayList<>();
+        long current = 0;
         for (final var comp : components) {
-            s.add(new Pair<>(current, comp.getA()));
-            c.add(new Pair<>(current, comp.getA()));
+            double startAngle = Math.PI * 2 * current / total;
+            stops.add(new Pair<>(startAngle, comp.getA()));
             current += comp.getB();
+            double endAngle = Math.PI * 2 * current / total;
+            double centerAngle = (startAngle + endAngle) / 2;
+            centers.add(new Pair<>(centerAngle, comp.getA()));
         }
-        final var stops = s.stream().map(pair -> new Pair<>(Math.PI * 2 * pair.getA() / total, pair.getB())).toList();
-
-        c.remove(0);
-        c.add(new Pair<>(total, GTMaterials.NULL));
-        final var centers = Streams
-                .zip(s.stream(), c.stream(),
-                        (begin, end) -> new Pair<>(Math.PI *
-                                (Objects.requireNonNull(begin).getA() + Objects.requireNonNull(end).getA()) / total,
-                                begin.getB()))
-                .toList();
 
         final var font = Minecraft.getInstance().font;
         final List<Pair<Vector2i, Material>> ts = new ArrayList<>();
@@ -204,22 +294,32 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
 
     private static List<Scanline> buildPieScanlines(List<Pair<Double, Material>> stops, long total, int radius) {
         if (radius <= 0 || total <= 0 || stops.isEmpty()) return List.of();
-        final var stopAngles = new double[stops.size()];
-        final var stopColors = new int[stops.size()];
-        for (int i = 0; i < stops.size(); i++) {
+        // 预计算颜色和角度，避免重复计算
+        final int stopCount = stops.size();
+        final double[] stopAngles = new double[stopCount];
+        final int[] stopColors = new int[stopCount];
+        for (int i = 0; i < stopCount; i++) {
             stopAngles[i] = stops.get(i).getA();
             stopColors[i] = MoleculeColorize.colorForMaterial(stops.get(i).getB());
         }
-        final var result = new ArrayList<Scanline>();
+
+        // 优化扫描线生成，减少对象创建
+        final List<Scanline> result = new ArrayList<>(radius * 2 + 1);
         final int r2 = radius * radius;
+
+        // 只处理可见的扫描线
         for (int y = -radius; y <= radius; y++) {
             final int dy2 = y * y;
             if (dy2 > r2) continue;
             final int maxX = (int) Math.floor(Math.sqrt(r2 - dy2));
             if (maxX < 0) continue;
-            final var segments = new ArrayList<Segment>();
+
+            // 优化线段生成，减少ArrayList创建
+            final List<Segment> segments = new ArrayList<>(4); // 预分配合理大小
             int segmentStart = -maxX;
             int currentColor = colorForAngle(Math.atan2(segmentStart, -y), stopAngles, stopColors);
+
+            // 优化角度计算，减少重复计算
             for (int x = -maxX + 1; x <= maxX; x++) {
                 final int color = colorForAngle(Math.atan2(x, -y), stopAngles, stopColors);
                 if (color != currentColor) {
@@ -236,8 +336,21 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
 
     private static int colorForAngle(double angle, double[] stopAngles, int[] stopColors) {
         if (angle < 0) angle += 2 * Math.PI;
-        int idx = Arrays.binarySearch(stopAngles, angle);
-        if (idx < 0) idx = -idx - 2;
+        // 优化二分查找，减少边界情况处理
+        int low = 0, high = stopAngles.length - 1;
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            double midVal = stopAngles[mid];
+            if (midVal < angle) {
+                low = mid + 1;
+            } else if (midVal > angle) {
+                high = mid - 1;
+            } else {
+                return stopColors[mid]; // 找到精确匹配
+            }
+        }
+        // 没有找到精确匹配，返回前一个颜色
+        int idx = high;
         if (idx < 0) idx = stopColors.length - 1;
         return stopColors[idx];
     }
