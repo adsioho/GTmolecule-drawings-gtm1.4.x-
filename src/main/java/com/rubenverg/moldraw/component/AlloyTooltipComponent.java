@@ -35,6 +35,11 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
             return thread;
         });
 
+        // 注册JVM关闭钩子，确保线程池在应用关闭时被正确关闭
+        static {
+            Runtime.getRuntime().addShutdownHook(new Thread(AsyncCalculationManager::shutdown));
+        }
+
         private static final ConcurrentMap<ComponentsCacheKey, CompletableFuture<List<Pair<Material, Long>>>> componentsFutures = new ConcurrentHashMap<>();
         private static final ConcurrentMap<RenderCacheKey, CompletableFuture<CachedAlloyTooltipData>> renderFutures = new ConcurrentHashMap<>();
 
@@ -89,6 +94,25 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
         public static void clearFutures() {
             componentsFutures.clear();
             renderFutures.clear();
+        }
+
+        /**
+         * 关闭线程池
+         */
+        public static void shutdown() {
+            clearFutures();
+            executorService.shutdown();
+            try {
+                // 等待线程池关闭，最多等待5秒
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    // 如果超时，强制关闭
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                // 线程被中断，强制关闭
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

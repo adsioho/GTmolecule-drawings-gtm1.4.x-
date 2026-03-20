@@ -118,7 +118,7 @@ public class GraphicalUtils {
             drawVerticalLine(x0, y0, y1, color, graphics);
         } else if (y0 == y1) {
             // 水平线
-            drawHorizontalLine(x0, y0, y1, color, graphics);
+            drawHorizontalLine(x0, x1, y0, color, graphics);
         } else {
             // 斜线，使用原有方法
             final IntBinaryOperator colorFunc = (xp, yp) -> color;
