@@ -640,8 +640,6 @@ public record AlloyTooltipComponent(Material material, List<Pair<Material, Long>
                     }
                 }
             }
-
-
         }
     }
 }
