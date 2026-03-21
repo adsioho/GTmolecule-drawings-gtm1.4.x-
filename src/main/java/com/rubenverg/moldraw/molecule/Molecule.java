@@ -2,6 +2,7 @@ package com.rubenverg.moldraw.molecule;
 
 import com.google.gson.*;
 import com.mojang.datafixers.util.Pair;
+import com.rubenverg.moldraw.MolDraw;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
 import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
@@ -257,14 +258,21 @@ public class Molecule {
                 if (!content.isJsonObject()) throw new JsonParseException("Molecule JSON contents must be objects");
                 final var contentObj = content.getAsJsonObject();
                 final var type = contentObj.get("type").getAsString();
-                molecule.add(switch (type) {
+                final MoleculeElement<?> element = switch (type) {
                     case "atom" -> jsonDeserializationContext.deserialize(contentObj, Atom.class);
                     case "bond" -> jsonDeserializationContext.deserialize(contentObj, Bond.class);
                     case "parens" -> jsonDeserializationContext.deserialize(contentObj, Parens.class);
                     case "circle" -> jsonDeserializationContext.deserialize(contentObj, CircleTransformation.class);
-                    default -> throw new JsonParseException(
-                            "Molecule JSON contents have unknown type %s".formatted(type));
-                });
+                    default -> {
+                        MolDraw.LOGGER.warn(
+                                "Unknown molecule content type '{}' in JSON, skipping. Supported types: atom, bond, parens, circle",
+                                type);
+                        yield null;
+                    }
+                };
+                if (element != null) {
+                    molecule.add(element);
+                }
             });
             if (obj.has("spin")) {
                 if (obj.get("spin").isJsonPrimitive()) {

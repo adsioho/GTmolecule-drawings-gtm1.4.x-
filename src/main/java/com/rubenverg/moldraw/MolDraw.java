@@ -525,24 +525,6 @@ public class MolDraw {
             return;
         }
 
-        String descriptionId = stack.getItem().getDescriptionId();
-
-        // 检查是否为机器外壳或其他非原材料物品
-        if (descriptionId.contains("machine_casing") ||
-                descriptionId.contains("casing") ||
-                descriptionId.contains("machine_parts") ||
-                descriptionId.contains("machine_block") ||
-                descriptionId.contains("structure_block") ||
-                descriptionId.contains("machine_hull") ||
-                descriptionId.contains("machine_frame") ||
-                descriptionId.contains("boiler") ||
-                descriptionId.contains("machine")) {
-            if (debug) {
-                MolDraw.LOGGER.info("Filtered out non-raw material item: {}", descriptionId);
-            }
-            return;
-        }
-
         Material material;
         if (stack.getItem() instanceof BucketItem) {
             BucketItem bi = (BucketItem) stack.getItem();
@@ -555,7 +537,7 @@ public class MolDraw {
             // 直接使用优化后的查找器
             if (debug) {
                 MolDraw.LOGGER.info("ItemStack lookup: {}, NBT: {}",
-                        descriptionId,
+                        stack.getItem().getDescriptionId(),
                         stack.getTag());
             }
 

@@ -26,20 +26,6 @@ public final class CustomMaterialLookup {
             return Optional.empty();
         }
 
-        // 过滤非原材料物品
-        String descriptionId = stack.getItem().getDescriptionId();
-        if (descriptionId.contains("machine_casing") ||
-                descriptionId.contains("casing") ||
-                descriptionId.contains("machine_parts") ||
-                descriptionId.contains("machine_block") ||
-                descriptionId.contains("structure_block") ||
-                descriptionId.contains("machine_hull") ||
-                descriptionId.contains("machine_frame") ||
-                descriptionId.contains("boiler") ||
-                descriptionId.contains("machine")) {
-            return Optional.empty();
-        }
-
         try {
             MaterialStack materialStack = ChemicalHelper.getMaterial(stack);
             if (materialStack != null && !isMaterialNull(materialStack.material())) {
