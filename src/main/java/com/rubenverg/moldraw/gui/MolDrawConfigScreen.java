@@ -24,13 +24,6 @@ public class MolDrawConfigScreen extends Screen {
         int buttonHeight = 20;
         int rowHeight = 30;
 
-        // MOL Converter button
-        Button molConverterButton = Button
-                .builder(Component.translatable("moldraw.gui.mol_converter.title"), button -> {
-                    this.minecraft.setScreen(new MOLConverterScreen());
-                }).bounds(centerX - buttonWidth / 2, startY, buttonWidth, buttonHeight).build();
-        this.addRenderableWidget(molConverterButton);
-
         // Back button
         Button backButton = Button.builder(Component.translatable("gui.back"), button -> {
             this.minecraft.setScreen(parent);

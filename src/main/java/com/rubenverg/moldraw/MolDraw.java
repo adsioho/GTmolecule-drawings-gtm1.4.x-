@@ -48,7 +48,6 @@ import com.rubenverg.moldraw.component.AlloyTooltipComponent;
 import com.rubenverg.moldraw.component.MoleculeTooltipComponent;
 import com.rubenverg.moldraw.data.AlloysData;
 import com.rubenverg.moldraw.data.MoleculesData;
-import com.rubenverg.moldraw.gui.MOLConverterScreen;
 import com.rubenverg.moldraw.molecule.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -90,13 +89,6 @@ public class MolDraw {
     public void registerCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(Commands.literal("moldraw")
-                .then(Commands.literal("molconverter")
-                        .executes(context -> {
-                            Minecraft.getInstance().execute(() -> {
-                                Minecraft.getInstance().setScreen(new MOLConverterScreen());
-                            });
-                            return 1;
-                        }))
                 .then(Commands.literal("config")
                         .executes(context -> {
                             Minecraft.getInstance().execute(() -> {
